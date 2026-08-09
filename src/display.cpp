@@ -94,7 +94,7 @@ Ard_eSPI *tft = new Ard_eSPI(
 ** Description:   Scroll large texts into screen
 ***************************************************************************************/
 void displayScrollingText(const String &text, Opt_Coord &coord) {
-    int len = text.length();
+    const String translated = uiTranslate(text);
     static String displayText = "";
     static int i = 0;
     static long _lastmillis = 0;
@@ -103,26 +103,34 @@ void displayScrollingText(const String &text, Opt_Coord &coord) {
 #else
     const int deadTime = 200;
 #endif
-    if (!displayText.startsWith(text)) i = 0;
-    displayText = text + "        "; // Add spaces for smooth looping
-    int scrollLen = len + 8;         // Full text plus space buffer
+    if (!displayText.startsWith(translated)) i = 0;
+    displayText = translated + "        "; // Add spaces for smooth looping
     tft->setTextColor(coord.fgcolor, coord.bgcolor);
-    if (len < coord.size) {
+    const int maxWidth = (coord.size > 0 ? coord.size - 1 : 1) * LW * tft->getTextsize();
+    const int lineHeight = uiTextLineHeight(translated, tft->getTextsize());
+    if (uiTextWidth(translated, tft->getTextsize()) <= maxWidth) {
         // Text fits within limit, no scrolling needed
         return;
     } else if (launcherMillis() > _lastmillis + deadTime) {
-        String scrollingPart =
-            displayText.substring(i, i + (coord.size - 1)); // Display charLimit characters at a time
+        if (i < 0 || i >= displayText.length()) i = 0;
+        const bool firstFrame = i == 0;
+        String scrollingPart = uiClipText(displayText.substring(i), maxWidth, tft->getTextsize());
         tft->fillRect(
-            coord.x, coord.y, (coord.size - 1) * LW * tft->getTextsize(), LH * tft->getTextsize(), BGCOLOR
+            coord.x, coord.y, maxWidth, lineHeight, BGCOLOR
         ); // Clear display area
-        tft->setCursor(coord.x, coord.y);
-        tft->setCursor(coord.x, coord.y);
-        tft->print(scrollingPart);
-        if (i >= scrollLen - coord.size) i = -1; // Loop back
+        uiDrawText(scrollingPart, coord.x, coord.y, tft->getTextsize());
+        // Advance by one decoded code point, never into the middle of a UTF-8
+        // sequence.  The trailing spaces are part of the loop buffer.
+        size_t nextOffset = static_cast<size_t>(i);
+        uint32_t codepoint = 0;
+        if (!uiDecodeUtf8(displayText.c_str(), displayText.length(), nextOffset, codepoint) ||
+            nextOffset >= displayText.length()) {
+            i = 0;
+        } else {
+            i = static_cast<int>(nextOffset);
+        }
         _lastmillis = launcherMillis();
-        i++;
-        if (i == 1) _lastmillis = launcherMillis() + 1000;
+        if (firstFrame) _lastmillis = launcherMillis() + 1000;
         tft->display(false);
     }
 }
@@ -264,9 +272,9 @@ void initDisplay(bool doAll) {
     tft->setTextSize(FG);
     tft->setTextColor(FGCOLOR);
 #if TFT_HEIGHT > 200
-    tft->drawCentreString("Launcher", tftWidth / 2, tftHeight / 2 - 10, 1);
+    uiDrawCentreText(uiText(UiTextKey::Launcher), tftWidth / 2, tftHeight / 2 - 10, FG);
 #else
-    tft->drawCentreString("Launcher", tftWidth / 2, tftHeight / 2 - 10, 1);
+    uiDrawCentreText(uiText(UiTextKey::Launcher), tftWidth / 2, tftHeight / 2 - 10, FG);
 #endif
     tft->setTextSize(FG);
     tft->setTextColor(FGCOLOR);
@@ -276,8 +284,9 @@ void initDisplay(bool doAll) {
         selectedAppName = selectedAppName.substring(0, tftWidth / (FM * LW) - 4);
         tft->setTextSize(FM);
         tft->setTextColor(FGCOLOR, BGCOLOR);
-        int appTextY = tftHeight - (1.5 * (FM * LH) + 10);
-        tft->drawCentreString(" " + selectedAppName + " ", tftWidth / 2, appTextY, 1);
+        const int appTextHeight = uiTextLineHeight(selectedAppName, FM);
+        int appTextY = tftHeight - (appTextHeight + 10);
+        uiDrawCentreText(" " + selectedAppName + " ", tftWidth / 2, appTextY, FM);
     }
 
 #ifdef E_PAPER_DISPLAY // epaper display draws only once
@@ -321,21 +330,14 @@ void displayCurrentVersion(
 #if TFT_HEIGHT > 200
     setTftDisplay(10, 50, ALCOLOR, FM);
 #endif
-    tft->print("by: ");
-    tft->setTextColor(~BGCOLOR);
-    tft->println(String(author).substring(0, 14));
+    tft->setTextColor(ALCOLOR);
+    tftprintln(String("by: ") + String(author).substring(0, 14), 10, 1);
 
     tft->setTextColor(ALCOLOR);
-    tft->setCursor(10, tft->getCursorY());
-    tft->print("v: ");
-    tft->setTextColor(~BGCOLOR);
-    tft->println(String(version).substring(0, 15));
+    tftprintln(String("v: ") + String(version).substring(0, 15), 10, 1);
 
     tft->setTextColor(ALCOLOR);
-    tft->setCursor(10, tft->getCursorY());
-    tft->print("from: ");
-    tft->setTextColor(~BGCOLOR);
-    tft->println(String(published_at));
+    tftprintln(String("from: ") + String(published_at), 10, 1);
 
     if (versions.size() > 1) {
         tft->setTextColor(ALCOLOR);
@@ -345,7 +347,7 @@ void displayCurrentVersion(
     }
 
     setTftDisplay(-1, -1, ALCOLOR, FM, BGCOLOR);
-    tft->drawCentreString("Options", tftWidth / 2, tftHeight - (10 + FM * 9), 1);
+    uiDrawCentreText(uiText(UiTextKey::Options), tftWidth / 2, tftHeight - (10 + FM * 9), FM);
     tft->drawRoundRect(
         tftWidth / 2 - 3 * FM * 11, tftHeight - (12 + FM * 9), FM * 6 * 11, FM * 8 + 3, 3, ALCOLOR
     );
@@ -375,7 +377,10 @@ void displayRedStripe(const String &text, uint16_t fgcolor, uint16_t bgcolor, bo
     int _y = tft->getCursorY();
     uint16_t _color = tft->getTextcolor();
     uint16_t _bgcolor = tft->getTextbgcolor();
+    // Diagnostics stay in the original English/original form; only display pixels
+    // are localized.
     Serial.println(String("Display Red Stripe: ") + text);
+    const String displayText = uiTranslate(text);
     // A stripe is put up to be read, so it restarts the idle clock. Long stages —
     // an HTTP connect, an erase, a retry backoff — otherwise pass without a single
     // wake, and the user ends up watching an unlit screen for the whole of one.
@@ -390,55 +395,14 @@ void displayRedStripe(const String &text, uint16_t fgcolor, uint16_t bgcolor, bo
 #endif
 
     // stripe drawing
-    int size = text.length() * LW * FM < (tft->width() - 2 * FM * LW) ? FM : FP;
+    int size = uiTextWidth(displayText, FM) < (tft->width() - 2 * FM * LW) ? FM : FP;
     int paddingX = 8;
     int paddingY = 5;
     int rectX = 10;
     int rectW = tftWidth - 20;
-    int maxLineChars = (rectW - 2 * paddingX) / (LW * size);
-    if (maxLineChars < 1) maxLineChars = 1;
+    std::vector<String> lines = uiWrapText(displayText, rectW - 2 * paddingX, size);
 
-    std::vector<String> lines;
-    String line;
-    String word;
-    auto appendWord = [&]() {
-        if (word.isEmpty()) return;
-
-        while (static_cast<int>(word.length()) > maxLineChars) {
-            if (!line.isEmpty()) {
-                lines.push_back(line);
-                line = "";
-            }
-            lines.push_back(word.substring(0, maxLineChars));
-            word = word.substring(maxLineChars);
-        }
-
-        int extraSpace = line.isEmpty() ? 0 : 1;
-        if (!line.isEmpty() && static_cast<int>(line.length() + extraSpace + word.length()) > maxLineChars) {
-            lines.push_back(line);
-            line = "";
-        }
-        if (!line.isEmpty()) line += " ";
-        line += word;
-        word = "";
-    };
-
-    for (size_t i = 0; i < text.length(); ++i) {
-        char c = text[i];
-        if (c == '\n') {
-            appendWord();
-            lines.push_back(line);
-            line = "";
-        } else if (c == ' ') {
-            appendWord();
-        } else {
-            word += c;
-        }
-    }
-    appendWord();
-    if (!line.isEmpty() || lines.empty()) lines.push_back(line);
-
-    int lineHeight = size * LH;
+    int lineHeight = uiTextLineHeight(displayText, size);
     int rectH = static_cast<int>(lines.size()) * lineHeight + 2 * paddingY;
     int maxRectH = tftHeight > 20 ? tftHeight - 20 : tftHeight;
     if (rectH > maxRectH) rectH = maxRectH;
@@ -452,7 +416,7 @@ void displayRedStripe(const String &text, uint16_t fgcolor, uint16_t bgcolor, bo
     int visibleLines = (rectH - 2 * paddingY) / lineHeight;
     int textY = rectY + (rectH - visibleLines * lineHeight) / 2;
     for (int i = 0; i < visibleLines && i < static_cast<int>(lines.size()); ++i) {
-        tft->drawCentreString(lines[i], tftWidth / 2, textY + i * lineHeight, 1);
+        uiDrawCentreText(lines[i], tftWidth / 2, textY + i * lineHeight, size);
     }
 
     tft->display(false);
@@ -583,6 +547,9 @@ Opt_Coord drawOptions(
     if (index >= arraySize) index = arraySize - 1;
 
     int lineHeight = FM * LH;
+    for (const Option &candidate : opt) {
+        lineHeight = std::max(lineHeight, uiTextLineHeight(uiTranslate(candidate.label), FM));
+    }
     const int rowSpacing = 4;
     const int paddingTop = 4;
     const int paddingBottom = 4;
@@ -712,12 +679,12 @@ Opt_Coord drawOptions(
 
     auto addNavLine = [&](const char *text, bool isUp) {
         int rowTop = textStartY + rowIndex * (lineHeight + rowSpacing);
-        int textWidth = strlen(text) * charWidth;
+        const String translated = uiTranslate(text);
+        int textWidth = uiTextWidth(translated, tft->getTextsize());
         int navX = boxX + paddingSide + 0 > ((lineWidth - textWidth) / 2) ? 0 : ((lineWidth - textWidth) / 2);
         tft->fillRect(boxX + paddingSide, rowTop, lineWidth, lineHeight, bgcolor);
-        tft->setCursor(navX, rowTop);
         tft->setTextColor(alcolor, bgcolor);
-        tft->drawCentreString(text, tftWidth / 2, rowTop, 1);
+        uiDrawCentreText(translated, tftWidth / 2, rowTop, tft->getTextsize());
 
         MenuOptions navItem("", isUp ? "-" : "+", nullptr, true, false);
         navItem.setCoords(boxX + paddingSide, rowTop, lineWidth, lineHeight + rowSpacing);
@@ -784,15 +751,14 @@ Opt_Coord drawOptions(
             if (i >= (optionCount - (RES / (LH * FM) + 1))) { labelWidth -= RES / (optionCount - i); }
         }
         if (labelWidth < 0) labelWidth = 0;
+        const String translatedLabel = uiTranslate(opt[optionIndex].label);
         int labelCharLimit = labelWidth / charWidth;
         if (labelCharLimit < 1) labelCharLimit = 1;
 
-        char txt[labelCharLimit];
-        snprintf(txt, sizeof(txt), "%-*s", labelCharLimit, opt[optionIndex].label.c_str());
-
         tft->setCursor(labelX, rowTop);
         tft->setTextColor(color, bgcolor);
-        tft->print(txt);
+        tft->fillRect(labelX, rowTop, labelWidth, lineHeight, bgcolor);
+        uiDrawText(uiClipText(translatedLabel, labelWidth, tft->getTextsize()), labelX, rowTop, tft->getTextsize());
 
         MenuOptions optItem(String(optionIndex), "", nullptr, true, optionIndex == index);
         optItem.setCoords(labelX, rowTop, 0 > labelWidth ? 0 : labelWidth, lineHeight + rowSpacing);
@@ -880,12 +846,13 @@ void drawMainMenu(std::vector<MenuOptions> &opt, int index) {
         uint16_t selectedColor = opt[i].active ? opt[i].color : LIGHTGREY;
         int f_size = maxIconTextSize;
         const int textLimit = w - 10;
+        const String translatedName = uiTranslate(opt[i].name);
         tft->setTextSize(f_size);
-        if (static_cast<int>(opt[i].name.length()) * LW * f_size > textLimit && f_size > FM) {
+        if (uiTextWidth(translatedName, f_size) > textLimit && f_size > FM) {
             f_size = FM;
             tft->setTextSize(f_size);
         }
-        if (static_cast<int>(opt[i].name.length()) * LW * f_size > textLimit && f_size > FP) {
+        if (uiTextWidth(translatedName, f_size) > textLimit && f_size > FP) {
             f_size = FP;
             tft->setTextSize(f_size);
         }
@@ -896,7 +863,12 @@ void drawMainMenu(std::vector<MenuOptions> &opt, int index) {
             tft->fillRoundRect(x, y, w - 6, h - 6, 5, selectedColor);
             tft->setTextColor(BGCOLOR, selectedColor);
             // Draw text in the center of the icon
-            tft->drawCentreString(opt[i].name, x + (w - 6) / 2, y + (h - 6) / 2 - LH * f_size / 2, 1);
+            uiDrawCentreText(
+                translatedName,
+                x + (w - 6) / 2,
+                y + (h - 6) / 2 - uiTextLineHeight(translatedName, f_size) / 2,
+                f_size
+            );
         } else {
             int drawX = x;
             int drawY = y;
@@ -923,7 +895,12 @@ void drawMainMenu(std::vector<MenuOptions> &opt, int index) {
             tft->drawRoundRect(drawX + 3, drawY + 3, drawW - 6, drawH - 6, 5, itemColor);
             tft->setTextColor(itemColor, BGCOLOR);
             // Draw text in the center of the icon
-            tft->drawCentreString(opt[i].name, drawX + drawW / 2, drawY + drawH / 2 - LH * f_size / 2, 1);
+            uiDrawCentreText(
+                translatedName,
+                drawX + drawW / 2,
+                drawY + drawH / 2 - uiTextLineHeight(translatedName, f_size) / 2,
+                f_size
+            );
         }
         // tft->drawRect(opt[i].x,opt[i].y,opt[i].w,opt[i].h,BLUE); // debug purpose
     }
@@ -931,13 +908,15 @@ void drawMainMenu(std::vector<MenuOptions> &opt, int index) {
     tft->setTextSize(FP);
     tft->setTextColor(FGCOLOR, BGCOLOR);
     // Draw the description of the selected item
-    tft->fillRect(10, tftHeight - (6 + LH * FP), tftWidth - 20, LH * FP, BGCOLOR);
-    tft->drawCentreString(opt[index].text, tftWidth / 2, tftHeight - (6 + LH * FP), 1);
+    const String description = uiTranslate(opt[index].text);
+    const int descriptionHeight = uiTextLineHeight(description, FP);
+    tft->fillRect(10, tftHeight - (6 + descriptionHeight), tftWidth - 20, descriptionHeight, BGCOLOR);
+    uiDrawCentreText(description, tftWidth / 2, tftHeight - (6 + descriptionHeight), FP);
     // Draw Launcher version and battery value
 #if TFT_HEIGHT < 200
-    tft->drawString("Launcher", 12 + RES, 12);
+    uiDrawText(uiText(UiTextKey::Launcher), 12 + RES, 12, FP);
 #else
-    tft->drawString("Launcher " + String(LAUNCHER), 12 + RES, 12);
+    uiDrawText(uiText(UiTextKey::Launcher) + " " + String(LAUNCHER), 12 + RES, 12, FP);
 #endif
     tft->setTextSize(maxIconTextSize);
     drawDeviceBorder();
@@ -1010,7 +989,7 @@ int drawBootAppShortcuts(std::vector<MenuOptions> &opt) {
         if (static_cast<int>(name.length()) > maxNameChars) name = name.substring(0, maxNameChars);
         tft->setTextSize(FM);
         tft->setTextColor(FGCOLOR, BGCOLOR);
-        tft->drawCentreString(name, x + (boxW - 2) / 2, by + boxH / 2 - (LH * FM) / 2, 1);
+        uiDrawCentreText(name, x + (boxW - 2) / 2, by + boxH / 2 - uiTextLineHeight(name, FM) / 2, FM);
 
         if (i < 10) { // Only the first 10 apps have a keyboard digit shortcut (1..9,0)
             String shortcutLabel = (i == 9) ? "0" : String(i + 1);
@@ -1478,45 +1457,39 @@ RESTART:
 **  similar to tft->println(), but allows to include margin
 **********************************************************************/
 void tftprintln(const String &txt, int margin, int numlines) {
-    String rem = txt; // working copy: consumed line by line below
-    int size = rem.length();
-    if (numlines == 0) numlines = (tftHeight - 2 * margin) / (tft->getTextsize() * 8);
-    int nchars = (tftWidth - 2 * margin) / (6 * tft->getTextsize()); // 6 pixels of width fot a letter size 1
-    int x = tft->getCursorX();
-    int start = 0;
-    while (size > 0 && numlines > 0) {
-        if (tft->getCursorX() < margin) tft->setCursor(margin, tft->getCursorY());
-        nchars = (tftWidth - tft->getCursorX() - margin) /
-                 (6 * tft->getTextsize()); // 6 pixels of width fot a letter size 1
-        tft->println(rem.substring(0, nchars));
-        rem = rem.substring(nchars);
-        size -= nchars;
-        numlines--;
+    const uint8_t size = tft->getTextsize() > 0 ? tft->getTextsize() : 1;
+    if (numlines == 0) numlines = (tftHeight - 2 * margin) / uiTextLineHeight(txt, size);
+    int cursorX = tft->getCursorX();
+    int cursorY = tft->getCursorY();
+    if (cursorX < margin) cursorX = margin;
+    const std::vector<String> lines = uiWrapText(uiTranslate(txt), tftWidth - cursorX - margin, size);
+    for (size_t i = 0; i < lines.size() && numlines > 0; ++i, --numlines) {
+        uiDrawText(lines[i], cursorX, cursorY, size);
+        cursorX = margin;
+        cursorY += uiTextLineHeight(lines[i], size);
     }
+    tft->setCursor(cursorX, cursorY);
 }
 /*********************************************************************
 **  Function: tftprintln
 **  similar to tft->println(), but allows to include margin
 **********************************************************************/
 void tftprint(const String &txt, int margin, int numlines) {
-    String rem = txt; // working copy: consumed line by line below
-    int size = rem.length();
-    if (numlines == 0) numlines = (tftHeight - 2 * margin) / (tft->getTextsize() * 8);
-    int nchars = (tftWidth - 2 * margin) / (6 * tft->getTextsize()); // 6 pixels of width fot a letter size 1
-    int x = tft->getCursorX();
-    int start = 0;
-    bool prim = true;
-    while (size > 0 && numlines > 0) {
-        if (!prim) { tft->println(); }
-        if (tft->getCursorX() < margin) tft->setCursor(margin, tft->getCursorY());
-        nchars = (tftWidth - tft->getCursorX() - margin) /
-                 (6 * tft->getTextsize()); // 6 pixels of width fot a letter size 1
-        tft->print(rem.substring(0, nchars));
-        rem = rem.substring(nchars);
-        size -= nchars;
-        numlines--;
-        prim = false;
+    const uint8_t size = tft->getTextsize() > 0 ? tft->getTextsize() : 1;
+    if (numlines == 0) numlines = (tftHeight - 2 * margin) / uiTextLineHeight(txt, size);
+    int cursorX = tft->getCursorX();
+    int cursorY = tft->getCursorY();
+    if (cursorX < margin) cursorX = margin;
+    const std::vector<String> lines = uiWrapText(uiTranslate(txt), tftWidth - cursorX - margin, size);
+    for (size_t i = 0; i < lines.size() && numlines > 0; ++i, --numlines) {
+        if (i > 0) {
+            cursorX = margin;
+            cursorY += uiTextLineHeight(lines[i - 1], size);
+        }
+        uiDrawText(lines[i], cursorX, cursorY, size);
+        cursorX += uiTextWidth(lines[i], size);
     }
+    tft->setCursor(cursorX, cursorY);
 }
 
 /***************************************************************************************

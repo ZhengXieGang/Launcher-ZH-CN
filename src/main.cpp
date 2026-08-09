@@ -426,33 +426,33 @@ void loop() {
     std::vector<MenuOptions> menuItems = {
         {
 #if (TFT_HEIGHT < 135) || (TFT_WIDTH < 135)
-         "SD", "Launch from SDCard",
+         "SD", uiText(UiTextKey::LaunchFromSd),
 #else
             "SD",
-            "Launch from or mng SDCard",
+            uiText(UiTextKey::LaunchFromOrManageSd),
 #endif
          [=]() { loopSD(false); },
          sdcardMounted
         },
 #ifndef DISABLE_OTA
-        {"OTA", "Online Installer", [=]() { ota_function(); }},
+        {"OTA", uiText(UiTextKey::OnlineInstaller), [=]() { ota_function(); }},
 #endif
         {
 #if (TFT_HEIGHT < 135) || (TFT_WIDTH < 135)
-         "WUI", "Start WebUI",
+         "WUI", uiText(UiTextKey::StartWebUi),
 #else
             "WUI",
-            "Start Web User Interface",
+            uiText(UiTextKey::StartWebUserInterface),
 #endif
          [=]() { loopOptionsWebUi(); }
         },
 #if defined(SOC_USB_OTG_SUPPORTED)
         {
 #if (TFT_HEIGHT < 135) || (TFT_WIDTH < 135)
-         "USB", "SD->USB",
+         "USB", uiText(UiTextKey::SdUsb),
 #else
             "USB",
-            "SD->USB Interface",
+            uiText(UiTextKey::SdUsbInterface),
 #endif
          [=]() {
                 if (setupSdCard()) {
@@ -460,6 +460,8 @@ void loop() {
                     tft->drawPixel(0, 0, 0);
                     tft->fillScreen(BGCOLOR);
                 } else {
+                    // displayError localizes the screen while retaining the
+                    // original English diagnostic text on the serial console.
                     displayError("Insert SD Card");
                 }
             }, sdcardMounted
@@ -472,14 +474,14 @@ void loop() {
             "PMan"
 #endif
             ,
-         "Partition Manager.", [=]() { partList(); }
+         uiText(UiTextKey::PartitionManager), [=]() { partList(); }
         },
         {
 #if (TFT_HEIGHT < 135) || (TFT_WIDTH < 135)
-         "CFG", "Change Settings.",
+         "CFG", uiText(UiTextKey::ChangeSettings),
 #else
             "CFG",
-            "Change Launcher Settings.",
+            uiText(UiTextKey::ChangeLauncherSettings),
 #endif
          [=]() { settings_menu(); }
         }
@@ -509,7 +511,7 @@ void loop() {
     menuItems.push_back(
         // Add power off option for devices that are not easy to turn off
         // on e-paper, it keeps the Launcher bootscreen printed
-        {"OFF", "Turn off Device", [=]() { powerOff(); }}
+        {"OFF", uiText(UiTextKey::TurnOffDevice), [=]() { powerOff(); }}
     );
 #endif
     opt = menuItems.size(); // number of options in the menu

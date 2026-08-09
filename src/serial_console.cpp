@@ -7,6 +7,7 @@
 #include "install_shared.h"
 #include "partition_install_layout.h"
 #include "partition_table_model.h"
+#include "localization.h"
 #include "settings.h"
 #include "utils.h"
 #include <Arduino.h>
@@ -49,6 +50,7 @@
 //   calibrate show                                print the calibration currently saved in NVS
 //   calibrate mirror <X/Y>                        flip the given axis and persist it
 //   calibrate swapXY                              toggle swapped X/Y and persist it
+//   language [zh-CN|en]                            select the serial/UI language
 // This lets a host script recover a device stuck auto-booting a queued OTA
 // firmware: send "nav SelPress" while the "Press the button to enter the
 // Launcher!" banner is printed (src/main.cpp bootscreen loop) to force the
@@ -769,6 +771,23 @@ static void handleCalibrateCommand(const std::vector<String> &tokens) {
 }
 #endif
 
+static void handleLanguageCommand(const std::vector<String> &tokens) {
+    if (tokens.size() < 2) {
+        launcherConsolePrintf("Language: %s\n", uiLanguageCode());
+        launcherConsolePrintln("Supported: zh-CN, en");
+        return;
+    }
+    if (!uiIsSupportedLanguage(tokens[1])) {
+        launcherConsolePrintln("ERR invalid language");
+        return;
+    }
+    if (!uiSetLanguageCode(tokens[1], true)) {
+        launcherConsolePrintln("ERR failed to save language");
+        return;
+    }
+    launcherConsolePrintf("OK language %s\n", uiLanguageCode());
+}
+
 static void printVersion() { launcherConsolePrintln("Launcher " LAUNCHER); }
 
 static void printHelp() {
@@ -796,6 +815,7 @@ static void printHelp() {
     launcherConsolePrintln("  wifi del <SSID>");
     launcherConsolePrintln("  wifi clear");
     launcherConsolePrintln("  wifi hosted retry");
+    launcherConsolePrintln("  language [zh-CN|en]  select the serial/UI language");
 }
 
 static void handleSerialCommand(const String &line) {
@@ -805,6 +825,8 @@ static void handleSerialCommand(const String &line) {
 
     if (cmd.equalsIgnoreCase("nav") && tokens.size() >= 2) {
         handleNavCommand(tokens[1]);
+    } else if (cmd.equalsIgnoreCase("language") || cmd.equalsIgnoreCase("lang")) {
+        handleLanguageCommand(tokens);
     } else if (cmd.equalsIgnoreCase("reboot")) {
         handleRebootCommand();
     } else if (cmd.equalsIgnoreCase("partitions")) {

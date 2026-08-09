@@ -337,92 +337,110 @@ void settings_menu() {
     while (idx >= 0 && !returnToMenu) {
         options = {
 #ifndef E_PAPER_DISPLAY
-            {"Charge Mode",
+            {uiText(UiTextKey::ChargeMode),
                                    [=]() {
                  chargeMode();
                  returnToMenu = true;
              }                                                 },
 #endif
-            {"Brightness",
+            {uiText(UiTextKey::Brightness),
                                    [=]() {
                  setBrightnessMenu();
                  saveConfigs();
              }                                                 },
-            {"Dim time",
+            {uiText(UiTextKey::DimTime),
                                    [=]() {
                  setdimmerSet();
                  saveConfigs();
              }                                                 },
 #if !defined(E_PAPER_DISPLAY)
-            {"UI Color",
+            {uiText(UiTextKey::UiColor),
                                    [=]() {
                  setUiColor();
                  saveConfigs();
              }                                                 },
 #endif
 #if !defined(LYLYGO_TDECK_PRO)
-            {"Orientation", [=]() {
+            {uiText(UiTextKey::Orientation), [=]() {
                  gsetRotation(true);
                  saveConfigs();
              }}
 #endif
         };
         if (sdcardMounted) {
-            options.push_back({onlyBins ? "[ ] See All Files" : "[x] See All Files", [=]() {
+            options.push_back({onlyBins ? "[ ] " + uiText(UiTextKey::SeeAllFiles)
+                                        : "[x] " + uiText(UiTextKey::SeeAllFiles), [=]() {
                                    onlyBins = !onlyBins;
                                    saveConfigs();
                                }});
-            options.push_back({noDotFiles ? "[ ] Show Dotfiles" : "[x] Show Dotfiles", [=]() {
+            options.push_back({noDotFiles ? "[ ] " + uiText(UiTextKey::ShowDotfiles)
+                                           : "[x] " + uiText(UiTextKey::ShowDotfiles), [=]() {
                                    noDotFiles = !noDotFiles;
                                    saveConfigs();
                                }});
-            options.push_back({autoBackup ? "[x] Auto Backup" : "[ ] Auto Backup", [=]() {
+            options.push_back({autoBackup ? "[x] " + uiText(UiTextKey::AutoBackup)
+                                           : "[ ] " + uiText(UiTextKey::AutoBackup), [=]() {
                                    autoBackup = !autoBackup;
                                    saveConfigs();
                                    saveIntoNVS();
                                }});
         }
 
-        options.push_back({bootToApp ? "[ ] Boot to Launcher" : "[x] Boot to Launcher", [=]() {
+        options.push_back({bootToApp ? "[ ] " + uiText(UiTextKey::BootToLauncher)
+                                     : "[x] " + uiText(UiTextKey::BootToLauncher), [=]() {
                                bootToApp = !bootToApp;
                                saveConfigs();
                            }});
-        options.push_back({askSpiffs ? "[x] Ask to copy SPIFFS" : "[ ] Ask to copy SPIFFS", [=]() {
+        options.push_back({askSpiffs ? "[x] " + uiText(UiTextKey::AskToCopySpiffs)
+                                     : "[ ] " + uiText(UiTextKey::AskToCopySpiffs), [=]() {
                                askSpiffs = !askSpiffs;
                                saveConfigs();
                            }});
-        options.push_back({"Partition Manager", [=]() { partList(); }});
+        options.push_back({uiText(UiTextKey::Language), [=]() { setLanguageMenu(); }});
+        options.push_back({uiText(UiTextKey::PartitionManager), [=]() { partList(); }});
 #if defined(HAS_KEYBOARD)
-        options.push_back({"Manage shortcuts", [=]() { manageKeyBindings(); }});
+        options.push_back({uiText(UiTextKey::ManageShortcuts), [=]() { manageKeyBindings(); }});
 #endif
 
-        if (dev_mode) options.push_back({"Boot Animation", [=]() { initDisplayLoop(); }});
-        if (dev_mode) options.push_back({"Deactivate Dev", [=]() { dev_mode = false; }});
+        if (dev_mode) options.push_back({uiText(UiTextKey::BootAnimation), [=]() { initDisplayLoop(); }});
+        if (dev_mode) options.push_back({uiText(UiTextKey::DeactivateDev), [=]() { dev_mode = false; }});
 #if defined(HAS_RESISTIVE_TOUCH)
-        options.push_back({"Calibrate Touch", calibrateTouch});
+        options.push_back({uiText(UiTextKey::CalibrateTouch), calibrateTouch});
 #endif
 #if defined(USE_CARDKB2) && defined(CARDKB2_SDA) && defined(CARDKB2_SCL)
-        options.push_back({"Start CardKb", [=]() { cardkb2_setup(CARDKB2_SDA, CARDKB2_SCL); }});
+        options.push_back({uiText(UiTextKey::StartCardKb), [=]() { cardkb2_setup(CARDKB2_SDA, CARDKB2_SCL); }});
 #endif
         // Only worth offering when the co-processor was latched off: clearing the
         // guard re-arms the bring-up, which only runs at boot, so reboot with it.
         if (!hostedWifiAvailable) {
-            options.push_back({"Retry WiFi Module", [=]() {
+            options.push_back({uiText(UiTextKey::RetryWifiModule), [=]() {
                                    launcherWifiHostedResetGuard();
                                    releaseHeapObjectsAndReboot();
                                }});
         }
-        if (dev_mode) options.push_back({"Reset Configs/Wifi", factoryReset});
-        options.push_back({"Restart", [=]() { return (void)releaseHeapObjectsAndReboot(); }});
+        if (dev_mode) options.push_back({uiText(UiTextKey::ResetConfigsWifi), factoryReset});
+        options.push_back({uiText(UiTextKey::Restart), [=]() { return (void)releaseHeapObjectsAndReboot(); }});
 #if !defined(CARDPUTER)
-        options.push_back({"Turn-off", [=]() { powerOff(); }});
+        options.push_back({uiText(UiTextKey::TurnOff), [=]() { powerOff(); }});
 #endif
 
-        options.push_back({"Main Menu", [=]() { returnToMenu = true; }});
+        options.push_back({uiText(UiTextKey::MainMenu), [=]() { returnToMenu = true; }});
         idx = loopOptions(options);
     }
     tft->drawPixel(0, 0, 0);
     tft->fillScreen(BGCOLOR);
+}
+
+void setLanguageMenu() {
+    options = {
+        {uiText(UiTextKey::SimplifiedChinese), []() { uiSetLanguage(UiLanguage::ChineseSimplified); }},
+        {uiText(UiTextKey::EnglishLanguage), []() { uiSetLanguage(UiLanguage::English); }},
+        {uiText(UiTextKey::Back), []() {}},
+    };
+    loopOptions(options);
+    // The current settings page is rebuilt by settings_menu(), immediately using
+    // the selected language. Persist the setting independently of config.conf.
+    uiSaveLanguageToNVS();
 }
 
 // This function comes from interface.h
@@ -520,7 +538,7 @@ void setBrightnessMenu() {
 **********************************************************************/
 void setUiColor() {
     options = {
-        {"Default",
+        {uiText(UiTextKey::Default),
          [&]() {
              FGCOLOR = 0x07E0;
              BGCOLOR = 0x0000;
@@ -528,7 +546,7 @@ void setUiColor() {
              odd_color = 0x30c5;
              even_color = 0x32e5;
          }                 },
-        {"Red",
+        {uiText(UiTextKey::Red),
          [&]() {
              FGCOLOR = 0xF800;
              BGCOLOR = 0x0000;
@@ -536,7 +554,7 @@ void setUiColor() {
              odd_color = 0xFBC0;
              even_color = 0xAAC0;
          }                 },
-        {"Blue",
+        {uiText(UiTextKey::Blue),
          [&]() {
              FGCOLOR = 0x94BF;
              BGCOLOR = 0x0000;
@@ -544,7 +562,7 @@ void setUiColor() {
              odd_color = 0xd69f;
              even_color = 0x079F;
          }                 },
-        {"Yellow",
+        {uiText(UiTextKey::Yellow),
          [&]() {
              FGCOLOR = 0xFFE0;
              BGCOLOR = 0x0000;
@@ -552,7 +570,7 @@ void setUiColor() {
              odd_color = 0x9480;
              even_color = 0xbae0;
          }                 },
-        {"Purple",
+        {uiText(UiTextKey::Purple),
          [&]() {
              FGCOLOR = 0xe01f;
              BGCOLOR = 0x0000;
@@ -560,7 +578,7 @@ void setUiColor() {
              odd_color = 0xf57f;
              even_color = 0x89d3;
          }                 },
-        {"White",
+        {uiText(UiTextKey::White),
          [&]() {
              FGCOLOR = 0xFFFF;
              BGCOLOR = 0x0000;
@@ -568,7 +586,7 @@ void setUiColor() {
              odd_color = 0x630C;
              even_color = 0x8410;
          }                 },
-        {"Black",   [&]() {
+        {uiText(UiTextKey::Black),   [&]() {
              FGCOLOR = 0x0000;
              BGCOLOR = 0xFFFF;
              ALCOLOR = 0x6b6d;
@@ -577,6 +595,8 @@ void setUiColor() {
          }},
     };
     loopOptions(options);
+    // Keep the source string English for the serial diagnostic; displayRedStripe
+    // translates it only when drawing the screen.
     displayRedStripe("Saving...");
 }
 /*********************************************************************
@@ -591,7 +611,7 @@ void setdimmerSet() {
         {"30s",     [&]() { time = 30; }},
         {"45s",     [&]() { time = 45; }},
         {"60s",     [&]() { time = 60; }},
-        {"Disable", [&]() { time = 0; } },
+        {uiText(UiTextKey::Disable), [&]() { time = 0; } },
     };
 
     loopOptions(options);
@@ -658,6 +678,7 @@ bool saveIntoNVS() {
     err |= nvsHandle->set_string("wui_pwd", wui_pwd.c_str());
     err |= nvsHandle->set_string("dwn_path", dwn_path.c_str());
     err |= nvsHandle->set_string("last_app", lastInstalledApp.c_str());
+    err |= nvsHandle->set_string("language", uiLanguageCode());
 #if defined(HEADLESS)
     // SD Pins
     err |= nvsHandle->set_item("miso", _miso);
@@ -775,6 +796,7 @@ void defaultValues() {
     wui_usr = "admin";
     wui_pwd = "launcher";
     dwn_path = "/downloads/";
+    uiSetLanguage(UiLanguage::ChineseSimplified, false);
 #if defined(HEADLESS)
     // SD Pins
     _miso = 0;
@@ -831,6 +853,17 @@ bool getFromNVS() {
     if (lastAppErr == ESP_OK) lastInstalledApp = String(appBuffer);
     else if (lastAppErr == ESP_ERR_NVS_NOT_FOUND) lastInstalledApp = "";
     else err |= lastAppErr;
+    char languageBuffer[16] = {0};
+    esp_err_t languageErr = nvsHandle->get_string("language", languageBuffer, sizeof(languageBuffer));
+    if (languageErr == ESP_OK) {
+        // Invalid values deliberately fall back to zh-CN.  Persisting the fallback
+        // happens on the next normal settings save, avoiding a second NVS handle here.
+        uiSetLanguageCode(String(languageBuffer), false);
+    } else if (languageErr == ESP_ERR_NVS_NOT_FOUND) {
+        uiSetLanguage(UiLanguage::ChineseSimplified, false);
+    } else {
+        err |= languageErr;
+    }
     // ESP_ERR_NVS_NOT_FOUND is expected after a firmware update adds new settings keys
     // that haven't been written yet. Keep values at their defaults instead of wiping everything.
     if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
@@ -1331,11 +1364,13 @@ void calibrateTouch() {
         uint16_t y;
     };
 
-    auto drawCenteredLine = [&](const char *text, int16_t y) { tft->drawCentreString(text, _w / 2, y, 1); };
+    auto drawCenteredLine = [&](const char *text, int16_t y) {
+        uiDrawCentreText(uiTranslate(text), _w / 2, y, FP);
+    };
 
     tft->setTextColor(FGCOLOR, BGCOLOR);
     tft->setTextSize(FP);
-    const int16_t lineHeight = LH;
+    const int16_t lineHeight = uiTextLineHeight(uiTranslate("Launcher Touch Calibration"), FP);
     int16_t y = (_h - lineHeight * 4) / 2;
     drawCenteredLine("Launcher Touch Calibration", y);
     y += lineHeight;

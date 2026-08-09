@@ -1,101 +1,106 @@
-# Launcher WebUI - Dev Server
+# Launcher WebUI 开发服务器
 
-Backend Node.js que replica o comportamento do `src/webInterface.cpp` para testar a interface web sem precisar de hardware ESP32.
+这是一个 Node.js 开发后端，用于在没有 ESP32 硬件时测试 WebUI。设备与开发服务器
+共享 `launcher/language` 语言设置，默认值为 `zh-CN`，也支持 `en`。
 
-## Requisitos
+## 要求
 
-- Node.js 16+
-- Sem dependencias externas
+- Node.js 16 或更高版本
+- 不需要额外依赖
 
-## Uso
+## 使用
 
 ```bash
-node server.js <pasta-raiz>
+node server.js <SD 卡根目录>
 ```
 
-A `<pasta-raiz>` e tratada como o cartao SD. Todos os arquivos listados, baixados, enviados e deletados operam dentro dessa pasta.
+`<SD 卡根目录>` 会被当作设备 SD 卡。文件列表、下载、上传和删除操作都限制在此目录内。
 
-Exemplos:
+示例：
 
 ```bash
 node server.js C:\Users\bmorc\Downloads
 node server.js D:\testes\sdcard
 ```
 
-Via npm (de dentro da pasta `backend/`):
+也可以从 `backend/` 目录通过 npm 启动：
 
 ```bash
 npm start -- C:\Users\bmorc\Downloads
 ```
 
-Porta e credenciais via variaveis de ambiente:
+可通过环境变量设置端口和凭据：
 
 ```bash
 PORT=3000 WUI_USR=admin WUI_PWD=minhasenha node server.js C:\pasta
 ```
 
-Apos iniciar, abra `http://localhost:8080`.
+启动后打开 `http://localhost:8080`。默认登录名为 `admin`，默认密码为 `admin`。
 
-Login padrao: `admin` / `admin`
+## 已实现的端点
 
-## Endpoints implementados
-
-| Endpoint | Metodo | Comportamento |
+| 端点 | 方法 | 行为 |
 |---|---|---|
-| `/ping` | GET | Retorna `launcher-pong` |
-| `/login` | POST | Autentica e cria cookie de sessao |
-| `/logout` | GET | Encerra sessao e redireciona |
-| `/systeminfo` | GET | Versao mock + estatisticas do SD |
-| `/listfiles?folder=` | GET | Lista real do diretorio |
-| `/file?name=&action=` | GET | Download, delete ou create (pasta) |
-| `/editfile?name=` | GET / POST | Le e salva arquivos de texto |
-| `/` | POST | Upload de arquivos (multipart) |
-| `/rename` | POST | Renomeia arquivo ou pasta |
-| `/nvs` | GET / POST | Dados NVS persistidos em `nvs_mock.json` |
-| `/partitions` | GET | Tabela de particoes atual (com edicoes pendentes, se houver) |
-| `/partitions?list=backups&label=` | GET | Lista de backups conhecidos para uma particao |
+| `/language` | GET/POST | 读取或更新 `zh-CN`/`en` 语言设置（POST 需要登录） |
+| `/ping` | GET | 返回 `launcher-pong` |
+| `/login` | POST | 验证凭据并创建会话 Cookie |
+| `/logout` | GET | 结束会话并重定向 |
+| `/systeminfo` | GET | 返回模拟版本和 SD 卡统计 |
+| `/listfiles?folder=` | GET | 列出真实目录 |
+| `/file?name=&action=` | GET | 下载、删除或创建文件夹 |
+| `/editfile?name=` | GET / POST | 读取或保存文本文件 |
+| `/` | POST | 上传文件（multipart） |
+| `/rename` | POST | 重命名文件或文件夹 |
+| `/nvs` | GET / POST | 读取或保存 `nvs_mock.json` 中的 NVS 数据 |
+| `/partitions` | GET | 返回当前分区表（包含待应用编辑） |
+| `/partitions?list=backups&label=` | GET | 列出指定分区的模拟备份 |
 | `/partitions` | POST | `action=resize\|create\|delete\|format\|apply\|discard\|backup\|restore` |
-| `/wifi` | GET | Simulado |
-| `/sdpins` | GET | Simulado |
-| `/reboot` | GET | Simulado |
-| `/OTA?update=1` | GET | Entra em modo de update e limpa o contexto OTA simulado |
-| `/OTA` | POST | Valida `command`, `size` e `manifest`, preparando a instalacao em serie |
-| `/OTAFILE` | POST | Recebe o binario completo e simula a gravacao sequencial dos blocos do manifest |
-| `/UPDATE` | POST | Simulado |
+| `/wifi` | GET | 模拟 WiFi 配置 |
+| `/sdpins` | GET | 模拟 SD 引脚配置 |
+| `/reboot` | GET | 模拟重启 |
+| `/OTA?update=1` | GET | 进入模拟更新模式并清除 OTA 上下文 |
+| `/OTA` | POST | 校验 `command`、`size` 和 `manifest`，准备分段安装 |
+| `/OTAFILE` | POST | 接收完整二进制并模拟按 manifest 顺序写入 |
+| `/UPDATE` | POST | 模拟 SD 卡更新 |
 
-## OTA simulado
+## OTA 模拟流程
 
-O backend mock acompanha o fluxo novo do firmware:
+后端复现固件端的 OTA 流程：
 
 1. `GET /OTA?update=1`
-2. `POST /OTA` com `command=0`, `size` e `manifest`
-3. `POST /OTAFILE` com o binario completo
+2. `POST /OTA`，提交 `command=0`、`size` 和 `manifest`
+3. `POST /OTAFILE`，提交完整二进制文件
 
-Quando existe `manifest`, o servidor:
+提交 `manifest` 时，服务器会：
 
-- valida os ranges de cada part
-- exige exatamente uma part do tipo `app`
-- ordena as parts por `sourceOffset`
-- simula a gravacao sequencial do mesmo arquivo enviado no upload
+- 校验每个分段的范围；
+- 要求恰好存在一个 `kind=app` 分段；
+- 按 `sourceOffset` 排序；
+- 模拟将上传文件中的对应范围写入设备。
 
-Sem `manifest`, ele mantem apenas um fallback legado simulado.
+没有 `manifest` 时，保留旧版兼容流程。
 
 ## NVS
 
-Os dados NVS ficam em `nvs_mock.json` na mesma pasta do servidor e persistem entre reinicializacoes. Na primeira execucao, um conjunto de chaves de exemplo e criado automaticamente.
+语言值保存在 `launcher/language`。缺失或非法值会回退到 `zh-CN`；`launcher/token`
+不会暴露，也不允许编辑，与固件行为一致。其余示例数据保存在同目录的
+`nvs_mock.json`，会跨服务器重启保留。
 
-A chave `launcher/token` nunca e exposta nem editavel, assim como no firmware.
+## 模拟分区管理（PMan）
 
-## Partition Manager (PMan) simulado
+该实现参考 `src/partition_table_model.cpp` 和 `src/partitioner.cpp`，用于驱动完整的
+WebUI 测试流程：
 
-Espelha o modelo de `src/partition_table_model.cpp` / `src/partitioner.cpp` o suficiente para exercitar a UI:
+- 已写入的分区表保存在 `partitions_mock.json`，首次运行会创建包含 `factory`、`app1`、
+  `app2` 及其数据分区的示例表；
+- `resize`、`create`、`delete` 只修改内存中的待处理表，`action=apply` 才写回文件，
+  `action=discard` 放弃更改；
+- 有待处理更改时不能 `format`；备份和恢复只生成并记录模拟路径，不复制真实数据；
+- 正在运行的 `factory`/`test`、系统分区（如 `nvs`、`otadata`）按固件规则受保护。
 
-- O estado "gravado em flash" fica em `partitions_mock.json` (criado com uma tabela de exemplo: `factory`, dois apps OTA `app1`/`app2` com metadados de app registry simulados — `Bruce` e `Marauder` — cada um com sua particao de dados associada).
-- Edicoes (`resize`, `create`, `delete`) ficam em memoria ("pending changes") ate um `action=apply`, que persiste em `partitions_mock.json` e limpa o estado pendente — igual ao fluxo `dirty` do dispositivo. `action=discard` descarta as edicoes.
-- `action=format` so e permitido sem edicoes pendentes, como no firmware.
-- `action=backup` e `action=restore` sao simulados: nenhum dado real e copiado, apenas caminhos de arquivo ficticios sao gerados/lembrados em memoria por `label`, o suficiente para exercitar o fluxo de backup/restore na UI.
-- Particoes protegidas (a "rodando", `factory`/`test`, e particoes de sistema como `nvs`/`otadata`) seguem as mesmas regras de bloqueio do firmware.
+## 安全边界
 
-## Seguranca
+所有文件操作都限制在启动参数指定的根目录内，路径穿越请求会被拒绝。
 
-Todas as operacoes de arquivo ficam restritas a pasta raiz informada na inicializacao. Tentativas de path traversal sao bloqueadas.
+HTTP 路径、JSON 字段、NVS 键和表单操作名保持英文，以便同一套浏览器测试流程同时
+验证 mock 后端和真实设备。

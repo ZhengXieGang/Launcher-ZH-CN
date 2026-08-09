@@ -24,6 +24,7 @@ try { nvs = JSON.parse(fs.readFileSync(NVS_FILE, 'utf8')); } catch {}
 if (!Object.keys(nvs).length) {
   nvs = {
     launcher: [
+      { k: 'language',    t: 'str', v: 'zh-CN' },
       { k: 'brightness', t: 'u8',  v: 128 },
       { k: 'rotation',   t: 'u8',  v: 1   },
       { k: 'wifi_ssid',  t: 'str', v: 'MyNetwork' },
@@ -32,7 +33,19 @@ if (!Object.keys(nvs).length) {
   };
   fs.writeFileSync(NVS_FILE, JSON.stringify(nvs, null, 2));
 }
+if (!Array.isArray(nvs.launcher)) nvs.launcher = [];
+if (!nvs.launcher.some((field) => field.k === 'language')) {
+  nvs.launcher.unshift({ k: 'language', t: 'str', v: 'zh-CN' });
+  fs.writeFileSync(NVS_FILE, JSON.stringify(nvs, null, 2));
+}
 function saveNvs() { fs.writeFileSync(NVS_FILE, JSON.stringify(nvs, null, 2)); }
+function normalizeLanguage(value) { return value === 'en' ? 'en' : 'zh-CN'; }
+function languageValue() {
+  const field = nvs.launcher.find((f) => f.k === 'language');
+  const normalized = normalizeLanguage(field && field.v);
+  if (field && field.v !== normalized) { field.v = normalized; saveNvs(); }
+  return normalized;
+}
 
 // ── Partition Manager (PMan) mock ───────────────────────────────────────────────
 // Mirrors the model in src/partition_table_model.cpp / src/partitioner.cpp closely
@@ -612,6 +625,10 @@ const server = http.createServer(async (req, res) => {
   // GET /style.css
   if (pathname === '/style.css') return serveFile(path.join(WEBUI_DIR, 'style.css'), 'text/css');
 
+  // Browsers request this automatically; keep it public so an unauthenticated
+  // login-page smoke test does not report a spurious 401 console error.
+  if (pathname === '/favicon.ico' && method === 'GET') return send(204, 'image/x-icon', '');
+
   // GET /logged-out
   if (pathname === '/logged-out') return serveFile(path.join(WEBUI_DIR, 'logout.html'), 'text/html');
 
@@ -628,6 +645,12 @@ const server = http.createServer(async (req, res) => {
       }
     });
     return sendJson(body);
+  }
+
+  // GET /language is public so login.html can select the device language. POST
+  // is handled after the auth wall below and persists the same NVS key as firmware.
+  if (pathname === '/language' && method === 'GET') {
+    return sendJson(JSON.stringify({ language: languageValue(), supported: ['zh-CN', 'en'] }));
   }
 
   // GET / — serve login page or main UI
@@ -676,6 +699,24 @@ const server = http.createServer(async (req, res) => {
 
   // ── Auth wall ────────────────────────────────────────────────────────────────
   if (!isAuthenticated(req)) return err(401, 'Unauthorized');
+
+  if (pathname === '/language' && method === 'POST') {
+    const body = await readBody(req);
+    const contentType = req.headers['content-type'] || '';
+    let params;
+    if (contentType.includes('application/json')) {
+      try { params = JSON.parse(body.toString()); } catch { return err(400, 'Invalid language'); }
+    } else {
+      params = parseParams(body, contentType);
+    }
+    const language = params.language;
+    if (!['zh-CN', 'en'].includes(language)) return err(400, 'Invalid language');
+    const field = nvs.launcher.find((item) => item.k === 'language');
+    if (field) field.v = language;
+    else nvs.launcher.unshift({ k: 'language', t: 'str', v: language });
+    saveNvs();
+    return sendJson(JSON.stringify({ language }));
+  }
 
   // GET /reboot
   if (pathname === '/reboot') {
@@ -857,6 +898,11 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/OTA' && method === 'POST') {
     const body = await readBody(req);
     const params = parseParams(body, req.headers['content-type'] || '');
+    if (Object.prototype.hasOwnProperty.call(params, 'update')) {
+      clearOtaContext();
+      console.log('[OTA] update mode enabled (simulated)');
+      return ok('Update');
+    }
     if (!Object.prototype.hasOwnProperty.call(params, 'command')) return err(400, 'Invalid OTA request');
 
     try {

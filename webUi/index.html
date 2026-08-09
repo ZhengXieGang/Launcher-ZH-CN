@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta charset="UTF-8">
@@ -8,7 +8,7 @@
 <body>
 <div class="w">
   <div class="card">
-    <h1>&#11835; LAUNCHER &#11835;</h1>
+    <h1>&#11835; <span data-i18n="Launcher">LAUNCHER</span> &#11835;</h1>
     <div class="row" style="margin-bottom:6px">
       <div class="tag">v <b id="firmwareVersion">&#8230;</b></div>
     </div>
@@ -17,13 +17,13 @@
     <form id="save" enctype="multipart/form-data" method="post">
       <input type="hidden" id="actualFolder" name="actualFolder" value="/">
     </form>
-    <button class="hbg" onclick="toggleMenu()">&#9776; Menu</button>
+    <button class="hbg" onclick="toggleMenu()">&#9776; <span data-i18n="Menu">Menu</span></button>
     <div class="row" id="menu">
-      <button onclick="toggleConfigOverlay()">&#9881; Config</button>
-      <button onclick="callOTA()">&#8593; OTA</button>
-      <button onclick="listFilesButton('/')">&#128193; Files</button>
-      <button onclick="loadPartitions()">&#128202; Partitions</button>
-      <button onclick="window.open('https://bmorcelli.github.io/Launcher/catalog.html','_blank','noopener,noreferrer')">Firmware list &#8599;</button>
+      <button onclick="toggleConfigOverlay()">&#9881; <span data-i18n="Config">Config</span></button>
+      <button onclick="callOTA()">&#8593; <span data-i18n="OTA">OTA</span></button>
+      <button onclick="listFilesButton('/')">&#128193; <span data-i18n="Files">Files</span></button>
+      <button onclick="loadPartitions()">&#128202; <span data-i18n="Partitions">Partitions</span></button>
+      <button onclick="window.open('https://bmorcelli.github.io/Launcher/catalog.html','_blank','noopener,noreferrer')"><span data-i18n="Firmware list">Firmware list</span> &#8599;</button>
     </div>
   </div>
   <div id="status"></div>
@@ -33,7 +33,7 @@
     <input type="file" id="fileInput" onchange="analyzeFile()" style="display:none" accept=".bin">
     <div id="analysisOutput"></div>
     <div id="spiffsInfo" style="display:none">
-      <p><b>SPIFFS</b>: Flash file system for ESP32. Some apps like <b>OrcaOne</b> require it.</p>
+      <p><b>SPIFFS</b>: <span data-i18n="Flash file system for ESP32. Some apps like">Flash file system for ESP32. Some apps like</span> <b>OrcaOne</b><span data-i18n=" require it."> require it.</span></p>
     </div>
   </div>
   <div id="updetailsheader"></div>
@@ -41,37 +41,42 @@
 </div>
 <div id="nvs" class="modal">
   <div class="mhdr">
-    <span class="mtitle">NVS Config</span>
-    <span><button onclick="saveNvs()">&#128190; Save</button> <button onclick="_('nvs').style.display='none'">&#10006;</button></span>
+    <span class="mtitle" data-i18n="NVS Config">NVS Config</span>
+    <span><button onclick="saveNvs()">&#128190; <span data-i18n="Save">Save</span></button> <button data-i18n-title="Close" title="Close" onclick="_('nvs').style.display='none'">&#10006;</button></span>
   </div>
   <div id="nvs-body"></div>
 </div>
 <div id="editor" class="modal">
   <div class="mhdr">
     <span id="editor-title" class="mtitle"></span>
-    <span><button onclick="saveFile()">&#128190; Save</button> <button onclick="_('editor').style.display='none'">&#10006;</button></span>
+    <span><button onclick="saveFile()">&#128190; <span data-i18n="Save">Save</span></button> <button data-i18n-title="Close" title="Close" onclick="_('editor').style.display='none'">&#10006;</button></span>
   </div>
   <textarea id="editor-content"></textarea>
 </div>
 <div id="upmodal">
   <div id="upbox">
-    <h3>Uploading</h3>
+    <h3 data-i18n="Uploading">Uploading</h3>
     <div id="uplist"></div>
   </div>
 </div>
 <div id="configOverlay" onclick="closeConfigOverlay(event)">
   <div id="configBox">
     <div class="mhdr">
-      <span class="mtitle">Config</span>
+      <span class="mtitle" data-i18n="Config">Config</span>
       <span><button onclick="toggleConfigOverlay()">&#10006;</button></span>
     </div>
     <div class="row" style="flex-direction:column;align-items:stretch">
-      <button onclick="rebootButton()">&#8635; Reboot</button>
-      <button onclick="SDConfig()">SD Pins</button>
-      <button onclick="WifiConfig('ssid')">WiFi</button>
-      <button onclick="WifiConfig('usr')">User/Pass</button>
-      <button onclick="loadNvs()">&#9881; NVS</button>
-      <button onclick="logoutButton()">&#10006; Logout</button>
+      <button onclick="rebootButton()">&#8635; <span data-i18n="Reboot">Reboot</span></button>
+      <button onclick="SDConfig()" data-i18n="SD Pins">SD Pins</button>
+      <button onclick="WifiConfig('ssid')" data-i18n="WiFi">WiFi</button>
+      <button onclick="WifiConfig('usr')" data-i18n="User/Pass">User/Pass</button>
+      <button onclick="loadNvs()">&#9881; <span data-i18n="NVS Config">NVS</span></button>
+      <label for="languageSelect" data-i18n="Language">Language</label>
+      <select id="languageSelect" onchange="changeLanguage(this.value)">
+        <option value="zh-CN" data-i18n="Simplified Chinese">简体中文</option>
+        <option value="en" data-i18n="English">English</option>
+      </select>
+      <button onclick="logoutButton()">&#10006; <span data-i18n="Logout">Logout</span></button>
     </div>
   </div>
 </div>
@@ -79,7 +84,7 @@
   <div id="pmanResizeBox">
     <div class="mhdr">
       <span id="pmanResizeTitle" class="mtitle">Resize</span>
-      <span><button onclick="pmanResizeConfirm()">&#128190; Apply</button> <button onclick="_('pmanResizeOverlay').classList.remove('open')">&#10006;</button></span>
+      <span><button onclick="pmanResizeConfirm()">&#128190; <span data-i18n="Apply Changes">Apply</span></button> <button data-i18n-title="Close" title="Close" onclick="_('pmanResizeOverlay').classList.remove('open')">&#10006;</button></span>
     </div>
     <div id="pmanResizeBody"></div>
   </div>

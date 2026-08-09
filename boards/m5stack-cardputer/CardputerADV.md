@@ -1,67 +1,66 @@
-# M5Stack Cardputer ADV Support
+# M5Stack Cardputer ADV 支持
 
-## Overview
+本文说明 Launcher 固件对 M5Stack Cardputer ADV 的支持。Cardputer ADV 使用与原版
+Cardputer 不同的键盘控制器，因此需要专用的硬件适配。
 
-This document details the implementation of M5Stack Cardputer ADV support for the Launcher firmware. The Cardputer ADV uses a different keyboard controller than the original Cardputer, requiring specific hardware adaptations.
+## 硬件差异
 
-## Hardware Differences
+### 原版 Cardputer 与 Cardputer ADV
 
-### Original Cardputer vs Cardputer ADV
-
-| Component | Original Cardputer | Cardputer ADV |
+| 组件 | 原版 Cardputer | Cardputer ADV |
 |-----------|-------------------|---------------|
-| Keyboard Controller | Direct GPIO matrix | TCA8418 I2C controller |
-| I2C Address | N/A | 0x34 |
-| SDA Pin | GPIO13 | GPIO8 |
-| SCL Pin | GPIO15 | GPIO9 |
-| Interrupt Pin | N/A | GPIO11 |
+| 键盘控制器 | 直接 GPIO 矩阵 | TCA8418 I2C 控制器 |
+| I2C 地址 | 不适用 | 0x34 |
+| SDA 引脚 | GPIO13 | GPIO8 |
+| SCL 引脚 | GPIO15 | GPIO9 |
+| 中断引脚 | 不适用 | GPIO11 |
 
-### TCA8418 Configuration
+### TCA8418 配置
 
-- **I2C Address**: 0x34
-- **Matrix Size**: 7 rows × 8 columns
-- **Communication**: I2C polling only
-- **Key Detection**: 100ms polling interval
+- **I2C 地址**：0x34
+- **矩阵大小**：7 行 × 8 列
+- **通信方式**：仅轮询 I2C
+- **按键检测**：轮询间隔 100ms
 
-## Key Mapping
+## 按键映射
 
-### Navigation Keys
+### 导航按键
 
-| Function | Key | Matrix Position | Keycode | Notes |
+| 功能 | 按键 | 矩阵位置 | 键码 | 说明 |
 |----------|-----|----------------|---------|-------|
-| Previous | ↑ or ← | Row=3, Col=9 or Row=3, Col=6 | 0x39 or 0x36 | Either Up or Left arrow |
-| Next | ↓ or → | Row=3, Col=10 or Row=4, Col=0 | 0x3A or 0x40 | Either Down or Right arrow |
-| Enter/Select | Enter | Row=4, Col=3 | 0x43 | Primary selection |
-| Escape/Back | Esc | Row=0, Col=1 | 0x01 | Back/Cancel |
+| 上一项 | ↑ 或 ← | Row=3, Col=9 或 Row=3, Col=6 | 0x39 或 0x36 | 两个方向键均可 |
+| 下一项 | ↓ 或 → | Row=3, Col=10 或 Row=4, Col=0 | 0x3A 或 0x40 | 两个方向键均可 |
+| 确认/选择 | Enter | Row=4, Col=3 | 0x43 | 主选择键 |
+| 返回/取消 | Esc | Row=0, Col=1 | 0x01 | 返回或取消 |
 
-### Cardputer ADV Navigation
+### Cardputer ADV 导航
 
-| Function | Key |
+| 功能 | 按键 |
 |----------|-------------------|
-| **Previous** | `,` (←) or `;` (↑) |
-| **Next** | `/` (→) or `.` (↓) |
-| **Select** | Enter or GPIO0 |
-| **Escape** | `` ` `` or Backspace |
+| **上一项** | `,`（←）或 `;`（↑） |
+| **下一项** | `/`（→）或 `.`（↓） |
+| **选择** | Enter 或 GPIO0 |
+| **返回** | `` ` `` 或 Backspace |
 
-### Additional I2C Devices Detected
+### 检测到的其他 I2C 设备
 
-- **0x18**: Likely accelerometer/IMU
-- **0x34**: TCA8418 keyboard controller
-- **0x69**: Likely additional sensor
+- **0x18**：可能是加速度计/IMU
+- **0x34**：TCA8418 键盘控制器
+- **0x69**：可能是其他传感器
 
-## Implementation Details
+## 实现细节
 
-### Files Modified
+### 修改的文件
 
 ```
 boards/m5stack-cardputer-adv/
-├── platformio.ini          # ADV-specific build configuration
-└── interface.cpp           # TCA8418 keyboard implementation
+├── platformio.ini          # ADV 专用构建配置
+└── interface.cpp           # TCA8418 键盘实现
 ```
 
-### Build Configuration
+### 构建配置
 
-**platformio.ini** additions:
+**platformio.ini** 新增：
 ```ini
 -DCARDPUTER_ADV=1
 -DTCA8418_INT_PIN=11
@@ -70,64 +69,74 @@ boards/m5stack-cardputer-adv/
 -DTCA8418_SCL_PIN=9
 ```
 
-**Dependencies:**
+**依赖：**
 ```ini
 adafruit/Adafruit TCA8418 @ ^1.0.1
 ```
 
-### Key Implementation Functions
+### 主要实现函数
 
-1. **_setup_gpio()**: Sets GPIO5 HIGH for SD card compatibility
-2. **_post_setup_gpio()**: Initializes TCA8418 I2C communication
+1. **_setup_gpio()**：为 SD 卡兼容性将 GPIO5 置为 HIGH。
+2. **_post_setup_gpio()**：初始化 TCA8418 的 I2C 通信。
 
-## Troubleshooting
+## 故障排查
 
-### Original Issue
-- **Symptom**: Device rebooted in endless loop after displaying "Using config.conf setup file"
-- **Cause**: Original GPIO keyboard initialization incompatible with ADV hardware
-- **Solution**: Conditional compilation to use TCA8418 for ADV variant
+### 原始问题
 
-### SD Card Mount Issue
-- **Symptom**: SD card would not mount due to hardware conflicts with additional I2C devices
-- **Cause**: GPIO5 (SPI CS) interference from TCA8418 I2C controller and other sensors
-- **Solution**: Set GPIO5 to HIGH during GPIO initialization to ensure SD card compatibility
+- **现象**：显示“Using config.conf setup file”后设备不断重启。
+- **原因**：原版 GPIO 键盘初始化方式与 ADV 硬件不兼容。
+- **解决**：条件编译 ADV 版本的 TCA8418 初始化逻辑。
 
-### I2C Communication
-- **Bus scan implemented**: Automatically detects available I2C devices
-- **Multiple address fallback**: Tests common TCA8418 addresses
-- **Pin configuration detection**: Tries multiple I2C pin combinations
+### SD 卡挂载问题
 
-## Build Instructions
+- **现象**：由于额外的 I2C 设备冲突，SD 卡无法挂载。
+- **原因**：GPIO5（SPI CS）受到 TCA8418 和其他传感器干扰。
+- **解决**：GPIO 初始化时将 GPIO5 设为 HIGH，确保 SD 卡片选保持空闲。
 
-### Prerequisites
-- PlatformIO installed
-- M5Stack Cardputer ADV hardware
-- USB cable for programming
+### I2C 通信
 
-### Compilation
-- Uncomment m5stack-cardputer-adv from platformio.ini
-- Comment out any other boards
+- **总线扫描**：自动检测可用 I2C 设备。
+- **多地址回退**：尝试常见的 TCA8418 地址。
+- **引脚检测**：尝试多组 I2C 引脚组合。
+
+## 构建说明
+
+### 前置条件
+
+- 已安装 PlatformIO
+- M5Stack Cardputer ADV 硬件
+- 用于编程的 USB 线
+
+### 编译
+
+- 在 `platformio.ini` 中启用 `m5stack-cardputer-adv`。
+- 注释掉不使用的其他板卡。
+
 ```bash
 cd Launcher
 pio run -e m5stack-cardputer-adv
 ```
 
-### Upload
-1. Put device in bootloader mode (hold GPIO0, press reset) may be needed in some cases
-2. Upload firmware:
+### 上传
+
+1. 某些设备需要进入引导模式（按住 GPIO0 并按复位）。
+2. 上传固件：
+
 ```bash
 pio run -e m5stack-cardputer-adv -t upload --upload-port /dev/ttyACM0
 ```
 
-### Serial Monitoring
+### 串口监控
+
 ```bash
 pio device monitor --port /dev/ttyACM0 --baud 115200
 ```
 
-## Debug Output
+## 调试输出
 
-### Successful Initialization
-```
+### 初始化成功
+
+```text
 DEBUG: Cardputer ADV - Initializing TCA8418 keyboard
 DEBUG: Initializing I2C with SDA=8, SCL=9
 DEBUG: Scanning I2C bus...
@@ -139,73 +148,82 @@ DEBUG: Attempting to initialize TCA8418 at address 0x34
 DEBUG: TCA8418 found and initialized successfully!
 ```
 
-### Key Press Events
-```
+### 按键事件
+
+```text
 DEBUG: Polling found key event (interrupt not working)
 TCA8418 Key Event (polled): Row=3, Col=10, PRESSED (keycode=0x3A)
 MAPPED: Down/Next pressed
 ```
 
-## Performance Characteristics
+以上调试输出属于有屏设备的历史串口调试日志，保持英文。无屏构建通过串口控制台交互时，
+说明文字默认使用简体中文；命令关键字、协议状态前缀和字段仍保持英文。
 
-- **Key response time**: ~100ms (polling interval)
-- **Memory usage**: 25.3% RAM, 27.5% Flash
-- **I2C communication**: Stable at standard speed (100kHz)
-- **Power consumption**: Similar to original Cardputer
+## 性能特征
 
-## Future Improvements
+- **按键响应时间**：约 100ms（轮询间隔）
+- **内存使用**：RAM 25.3%，Flash 27.5%
+- **I2C 通信**：标准速率（100kHz）下稳定
+- **功耗**：与原版 Cardputer 相近
 
-1. Jump-to-letter by pressing a letter on the keyboard
+## 后续改进
 
-### Known Limitations
-1. **Polling-only operation**: 100ms polling interval (interrupt pin not connected in hardware)
-2. **Limited key mapping**: Only navigation keys currently mapped
-3. **No key combinations**: Modifier keys not implemented
+1. 支持按字母跳转。
 
-## Validation Tests
+### 已知限制
 
-### Functional Tests Passed
-- ✅ Device boots without reboot loop
-- ✅ TCA8418 detection and initialization
-- ✅ I2C communication stable
-- ✅ Key press detection working
-- ✅ Navigation key mapping functional
-- ✅ Launcher menu navigation operational
-- ✅ SD card mounting and file system access
-- ✅ Power saving prevention during keyboard navigation
-- ✅ All launcher features accessible
+1. **仅轮询**：轮询间隔为 100ms（硬件未连接中断引脚）。
+2. **按键映射有限**：当前只映射导航按键。
+3. **不支持组合键**：尚未实现修饰键。
 
-### Hardware Compatibility
-- ✅ M5Stack Cardputer ADV hardware
-- ✅ ESP32-S3 processor support
-- ✅ 8MB flash memory utilization
-- ✅ I2C bus sharing with other sensors
+## 验证测试
 
-## Support Information
+### 已通过的功能测试
 
-### Debugging Commands
+- ✅ 设备启动后不会进入重启循环
+- ✅ TCA8418 检测和初始化
+- ✅ I2C 通信稳定
+- ✅ 按键检测正常
+- ✅ 导航键映射正常
+- ✅ Launcher 菜单导航正常
+- ✅ SD 卡挂载和文件系统访问
+- ✅ 键盘导航期间不会误进入省电
+- ✅ Launcher 功能均可访问
+
+### 硬件兼容性
+
+- ✅ M5Stack Cardputer ADV
+- ✅ ESP32-S3 处理器
+- ✅ 8MB Flash 使用
+- ✅ 与其他传感器共享 I2C 总线
+
+## 支持信息
+
+### 调试命令
+
 ```bash
-# Build only
+# 仅构建
 pio run -e m5stack-cardputer-adv
 
-# Upload with bootloader mode
+# 引导模式上传
 pio run -e m5stack-cardputer-adv -t upload --upload-port /dev/ttyACM0
 
-# Monitor output
+# 串口监控
 pio device monitor --port /dev/ttyACM0 --baud 115200
 
-# Clean build
+# 清理构建
 pio run -e m5stack-cardputer-adv -t clean
 ```
 
-### Configuration Files
-- **Main config**: `platformio.ini` (default environment disabled)
-- **ADV config**: `boards/m5stack-cardputer-adv/platformio.ini`
-- **Hardware interface**: `boards/m5stack-cardputer-adv/interface.cpp`
+### 配置文件
+
+- **主配置**：`platformio.ini`（默认环境已禁用）
+- **ADV 配置**：`boards/m5stack-cardputer-adv/platformio.ini`
+- **硬件接口**：`boards/m5stack-cardputer-adv/interface.cpp`
 
 ---
 
-**Author**: n0xa
-**Date**: September 9, 2025
-**Status**: Complete and Functional
-**Tested**: M5Stack Cardputer ADV and M5Stack Cardputer
+**作者**：n0xa
+**日期**：2025-09-09
+**状态**：已完成并可用
+**测试硬件**：M5Stack Cardputer ADV 和 M5Stack Cardputer

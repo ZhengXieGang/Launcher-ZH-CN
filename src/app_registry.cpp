@@ -2,6 +2,7 @@
 #include "backup_manager.h"
 #include "display.h"
 #include "idf/launcher_platform.h"
+#include "localization.h"
 #include "mykeyboard.h"
 #include "settings.h"
 #include "utils.h"
@@ -431,7 +432,9 @@ bool launcherDeleteAppByLabel(const char *label) {
                 {"Remove Without Backup", [&]() { choice = 1; }},
                 {"Cancel",                [&]() { choice = 2; }},
             };
-            displayRedStripe((String("Backup data for ") + appName + "?").c_str());
+            // Keep the source sentence English so the display layer can
+            // localize pixels without changing the serial diagnostic.
+            displayRedStripe(String("Backup data for ") + appName + "?");
             loopOptions(opts);
             if (choice == 2) return false;
             if (choice == 0) {

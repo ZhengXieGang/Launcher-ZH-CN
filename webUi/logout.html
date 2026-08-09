@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +22,10 @@
 </head>
 
 <body>
-    <h3><a href="/">Log Back In</a></h3>
+    <h3><a href="/" id="loginLink">Log Back In</a></h3>
 </body>
 
 </html>
+<script>
+(()=>{const e=document.getElementById("loginLink"),x=new XMLHttpRequest();x.open("GET","/language");x.onload=()=>{try{if(JSON.parse(x.responseText).language==="zh-CN")e.textContent="返回登录";}catch(_){};};x.send();})();
+</script>

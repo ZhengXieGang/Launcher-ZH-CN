@@ -25,7 +25,7 @@ tr:last-child td{border-bottom:none}
 .mb button:hover{border-color:transparent;color:var(--ac)}
 .mrow td{background:var(--s2);font-size:.82rem;padding:6px 8px}
 #status{font-size:.82rem;color:var(--ac);min-height:1em;padding:3px 0}
-.modal{display:none;position:fixed;inset:0;background:var(--bg);z-index:10;padding:12px;overflow-y:auto}
+.modal{display:none;position:fixed;inset:0;background:var(--bg);z-index:30;padding:12px;overflow-y:auto}
 .mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--br)}
 .mtitle{font-weight:600;color:var(--ac)}
 #editor-content{width:100%;height:calc(100vh - 80px);background:var(--s1);color:var(--ac);border:1px solid var(--br);border-radius:var(--r);padding:10px;font-family:monospace;resize:none;font-size:.82rem}

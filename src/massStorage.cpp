@@ -1,6 +1,7 @@
 
 #include "massStorage.h"
 #include "display.h"
+#include "localization.h"
 #include "idf/launcher_platform.h"
 #include "sd_functions.h"
 #ifdef SOC_USB_OTG_SUPPORTED
@@ -329,7 +330,7 @@ void MassStorage::displayMessage(String message) {
     tft->drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, ALCOLOR);
     tft->fillRoundRect(6, 6, tftWidth - 12, tftHeight - 12, 5, BGCOLOR);
     setTftDisplay(7, 7, ALCOLOR, FP, BGCOLOR);
-    tft->drawCentreString("-= USB MSC =-", tftWidth / 2, 0, 8);
+    uiDrawCentreText(uiText(UiTextKey::UsbMsc), tftWidth / 2, 0, FP);
     tft->setCursor(10, 20);
     tftprint(message, 10, 5);
 }

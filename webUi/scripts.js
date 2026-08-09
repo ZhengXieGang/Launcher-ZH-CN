@@ -1,28 +1,186 @@
+// WebUI language packages.  Keys are deliberately English and are unrelated to
+// HTTP paths, JSON fields, NVS keys, or protocol commands.
+const UI_TEXT = {
+    "zh-CN": {
+        "Launcher": "启动器", "Menu": "菜单", "Config": "配置", "OTA": "OTA", "Files": "文件",
+        "Partitions": "分区", "Firmware list": "固件列表", "NVS Config": "NVS 配置",
+        "Save": "保存", "Close": "关闭", "Uploading": "正在上传", "Reboot": "重启", "SD Pins": "SD 引脚",
+        "WiFi": "WiFi", "User/Pass": "用户名/密码", "Logout": "注销", "Language": "语言",
+        "OTA Update": "OTA 更新", "Preparing...": "正在准备...", "Updating...": "正在更新...",
+        "Start Update": "开始更新", "No installable partitions found in this file.": "文件中没有可安装的分区。",
+        "Data partition": "数据分区", "Files": "文件", "Folder": "文件夹", "+ New Folder": "+ 新建文件夹",
+        "Partition Manager": "分区管理", "Apply Changes": "应用更改", "Discard Changes": "放弃更改",
+        "Unsaved changes — nothing is written to flash until you Apply.": "有未保存的更改，应用前不会写入闪存。",
+        "Free Space": "可用空间", "App": "应用", "Data": "数据", "Free": "空闲", "System": "系统",
+        "Details": "详情", "Resize": "调整大小", "Backup": "备份", "Restore": "恢复", "Format": "格式化",
+        "Remove": "删除", "protected": "受保护", "running": "运行中", "Firmware": "固件",
+        "No data partition": "没有数据分区", "Loading...": "正在加载...", "Failed to load partitions.": "加载分区失败。",
+        "Upload Complete": "上传完成", "Upload Failed": "上传失败", "Upload Aborted": "上传已取消",
+        "File saved!": "文件已保存！", "NVS saved!": "NVS 已保存！", "Confirm Restart?!": "确认重启？",
+        "Invalid credentials.": "用户名或密码无效。", "Error loading file": "加载文件失败", "Invalid pins": "引脚无效",
+        "Please, select a file.": "请选择文件。", "File is not a .bin": "文件不是 .bin 格式",
+        "Start Update": "开始更新", "Installation complete, restart your device!": "安装完成，请重启设备！",
+        "Invalid pins": "引脚无效", "Invalid Name": "名称无效", "Invalid Folder Name": "文件夹名称无效",
+        "Invalid size": "大小无效", "Invalid choice": "选择无效", "Failed": "失败", "Failed to list backups": "列出备份失败",
+        "Backup saved: ": "备份已保存：", "No backups found for \"": "找不到分区备份：\"",
+        "Partition table written. The device is rebooting...": "分区表已写入，设备正在重启...",
+        "Select language": "选择语言", "Simplified Chinese": "简体中文", "English": "English"
+        ,"Used": "已用", "Total": "总计", "Name": "名称", "Size": "大小", "Folder": "文件夹",
+        "+ New Folder": "+ 新建文件夹", "Enter the new name: ": "输入新名称：", "Invalid Name": "名称无效",
+        "Do you really want to DELETE the file: ": "确定要删除文件：", "This action can't be undone!": "此操作无法撤销！",
+        "Folder Name": "文件夹名称", "Invalid Folder Name": "文件夹名称无效"
+        ,"Uploaded": "已上传", "of": "/", "files.": "个文件。", "Upload failed": "上传失败"
+        ,"OTA App": "OTA 应用", "FAT": "FAT", "Partition": "分区", "Offset": "偏移量",
+        "Range: ": "范围：", "Size in KB:": "大小（KB）：", "Partition label:": "分区标签：",
+        "Used": "已用", "Total": "总计", "Functionality exclusive for Headless environment": "仅无屏设备支持此功能",
+        "Functionality exclusive for Headless environment (devices with no screen)": "仅无屏设备（无屏幕设备）支持此功能",
+        "MISO pin": "MISO 引脚", "MOSI pin": "MOSI 引脚", "SCK pin": "SCK 引脚", "CS pin": "CS 引脚",
+        "Username of access Launcher": "启动器访问用户名", "Password": "密码", "SSID of your network": "网络 SSID",
+        "Password of your network": "网络密码", "System (bootloader, nvs, otadata...)": "系统（引导程序、NVS、OTA 数据...）",
+        "Write the new partition table and reboot the device now?": "立即写入新的分区表并重启设备？",
+        "Discard all pending changes?": "放弃所有待处理的更改？",
+        "Remove partition": "删除分区", "This is staged until you Apply Changes.": "应用更改前只暂存此操作。",
+        "Erase all data on": "立即擦除分区", "This happens immediately and can't be undone.": "此操作立即执行且无法撤销。",
+        "Choose a backup to restore:\n": "选择要恢复的备份：\n",
+        "Restore": "恢复", "This overwrites the current data on the partition.": "这会覆盖分区中的当前数据。",
+        "Restored": "已恢复", "from": "来源",
+        "No backups found for": "找不到分区备份",
+        "Label: ": "标签：", "Type: ": "类型：", "Offset: ": "偏移量：", "Size: ": "大小：", "Flags: ": "标志：", "Firmware: ": "固件：", "Data partition: ": "数据分区："
+        ,"Created new folder: ": "已创建文件夹：", "Deleted : ": "已删除：", "FAIL deleting: ": "删除失败：",
+        "FAIL creating folder: ": "创建文件夹失败：", "Fail renaming file.": "重命名文件失败。",
+        "renamed to": "已重命名为", "Starting Update": "正在开始更新", "Fail starting SD Card.": "启动 SD 卡失败。",
+        "Pins configured.": "引脚配置完成。", "Pins not configured.": "引脚未配置。", "User: ": "用户：",
+        "configured with password: ": "已配置密码：", "Flash file system for ESP32. Some apps like": "ESP32 的闪存文件系统，某些应用（例如",
+        " require it.": "）需要它。"
+    },
+    "en": {}
+};
+Object.keys(UI_TEXT["zh-CN"]).forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(UI_TEXT.en, key)) UI_TEXT.en[key] = key;
+});
+let uiLanguage = "zh-CN";
+function t(key, fallback) {
+    const table = UI_TEXT[uiLanguage] || UI_TEXT["zh-CN"];
+    return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : (fallback === undefined ? key : fallback);
+}
+function translateStatus(value) {
+    if (!value) return value;
+    const table = UI_TEXT[uiLanguage] || {};
+    if (Object.prototype.hasOwnProperty.call(table, value)) return table[value];
+    const keys = Object.keys(table).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+        if (value.startsWith(key)) return table[key] + value.substring(key.length);
+    }
+    return value;
+}
+function applyLanguage() {
+    document.documentElement.lang = uiLanguage;
+    document.querySelectorAll('[data-i18n]').forEach((node) => {
+        const key = node.getAttribute('data-i18n');
+        if (!node.dataset.i18nDefault) node.dataset.i18nDefault = node.textContent;
+        node.textContent = t(key, node.dataset.i18nDefault);
+    });
+    const select = _('languageSelect');
+    if (select) select.value = uiLanguage;
+    const title = document.querySelector('title[data-i18n]');
+    if (title) document.title = t(title.getAttribute('data-i18n'), title.textContent);
+    document.querySelectorAll('[data-i18n-title]').forEach((node) => {
+        node.title = t(node.getAttribute('data-i18n-title'), node.title);
+    });
+}
+function translateRenderedText(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => { node.nodeValue = translateRenderedValue(node.nodeValue); });
+    root.querySelectorAll('[title]').forEach((node) => { node.title = translateRenderedValue(node.title); });
+}
+function translateRenderedValue(value) {
+    let result = value;
+    const target = UI_TEXT[uiLanguage] || UI_TEXT["zh-CN"];
+    const pairs = [];
+    Object.keys(UI_TEXT["zh-CN"]).forEach((key) => {
+        const translated = Object.prototype.hasOwnProperty.call(target, key) ? target[key] : key;
+        pairs.push([key, translated]);
+        const simplified = UI_TEXT["zh-CN"][key];
+        if (simplified !== key) pairs.push([simplified, translated]);
+    });
+    pairs.sort((a, b) => b[0].length - a[0].length);
+    pairs.forEach(([source, translated]) => {
+        if (source && source !== translated && result.includes(source)) result = result.split(source).join(translated);
+    });
+    return result;
+}
+function loadLanguage() {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/language');
+    xhr.onload = () => {
+        if (xhr.status !== 200) return;
+        try {
+            const value = JSON.parse(xhr.responseText).language;
+            if (value === 'en' || value === 'zh-CN') uiLanguage = value;
+        } catch (_) { /* keep the default */ }
+        applyLanguage();
+        refreshLocalizedSection();
+    };
+    xhr.send();
+}
+function changeLanguage(value) {
+    if (value !== 'en' && value !== 'zh-CN') return;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/language');
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = () => {
+        if (xhr.status !== 200) { _('status').textContent = translateStatus(xhr.responseText); return; }
+        uiLanguage = value;
+        applyLanguage();
+        refreshLocalizedSection();
+    };
+    xhr.send('language=' + encodeURIComponent(value));
+}
 function _(e) { return document.getElementById(e); }
 function toggleMenu(){_('menu').classList.toggle('open')}
 function toggleConfigOverlay(){_('configOverlay').classList.toggle('open')}
 function closeConfigOverlay(event){if(event.target.id==='configOverlay')_('configOverlay').classList.remove('open')}
 function closePmanResizeOverlay(event){if(event.target.id==='pmanResizeOverlay')_('pmanResizeOverlay').classList.remove('open')}
 function toggleRow(b){const r=b.closest('tr').nextElementSibling;r.style.display=r.style.display==='none'?'table-row':'none'}
+function refreshLocalizedSection() {
+    const section = _currentSection;
+    if (section === 'files') {
+        listFilesButton(_('actualFolder').value || '/');
+    } else if (section === 'partitions') {
+        loadPartitions();
+    } else if (section === 'ota') {
+        _('detailsheader').innerHTML = '<h3>' + t('OTA Update') + '</h3>';
+        if (_otaFile && _otaManifest) renderOtaActions(_otaFile, _otaManifest);
+        else {
+            translateRenderedText(_('analysisOutput'));
+            translateRenderedText(_('spiffsInfo'));
+        }
+        translateRenderedText(_('status'));
+        translateRenderedText(_('updetails'));
+    }
+}
 const editableExts = new Set(['txt','ini','conf','c','cpp','h','hpp','js','css','htm','html','ts']);
 function isEditable(name) { return editableExts.has(name.split('.').pop().toLowerCase()); }
 let editingFile = '';
 function editFile(path) {
     editingFile = path;
     _('editor-title').textContent = path;
-    _('editor-content').value = 'Loading...';
+    _('editor-content').value = t('Loading...');
     _('editor').style.display = 'block';
     const xhr = new XMLHttpRequest();
     xhr.open('GET', '/editfile?name=' + encodeURIComponent(path));
     xhr.onload = () => { _('editor-content').value = xhr.responseText; };
-    xhr.onerror = () => { _('editor-content').value = 'Error loading file'; };
+    xhr.onerror = () => { _('editor-content').value = t('Error loading file'); };
     xhr.send();
 }
 function saveFile() {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/editfile?name=' + encodeURIComponent(editingFile));
     xhr.setRequestHeader('Content-Type', 'text/plain');
-    xhr.onload = () => { _('status').innerHTML = xhr.responseText === 'OK' ? 'File saved!' : xhr.responseText; };
+    xhr.onload = () => { _('status').innerHTML = xhr.responseText === 'OK' ? t('File saved!') : translateStatus(xhr.responseText); };
     xhr.send(_('editor-content').value);
 }
 
@@ -32,7 +190,7 @@ function _nvsIsCheckbox(f) { return f.t === 'u8' && (f.v === 0 || f.v === 1); }
 function _nvsId(ns, k) { return 'nvs__' + ns + '__' + k; }
 function loadNvs() {
     _('nvs').style.display = 'block';
-    _('nvs-body').innerHTML = 'Loading...';
+    _('nvs-body').innerHTML = t('Loading...');
     const x = new XMLHttpRequest();
     x.open('GET', '/nvs');
     x.onload = () => {
@@ -71,7 +229,7 @@ function saveNvs() {
     const x = new XMLHttpRequest();
     x.open('POST', '/nvs');
     x.setRequestHeader('Content-Type', 'application/json');
-    x.onload = () => { _('status').innerHTML = x.responseText === 'OK' ? 'NVS saved!' : x.responseText; _('nvs').style.display = 'none'; };
+    x.onload = () => { _('status').innerHTML = x.responseText === 'OK' ? t('NVS saved!') : translateStatus(x.responseText); _('nvs').style.display = 'none'; };
     x.send(JSON.stringify(out));
 }
 
@@ -105,30 +263,30 @@ function WifiConfig(target) {
     let wifiSsid;
     let wifiPwd;
     if (target === "usr") {
-        wifiSsid = prompt("Username of access Launcher", "admin");
-        wifiPwd = prompt("Password", "launcher");
+        wifiSsid = prompt(t("Username of access Launcher"), "admin");
+        wifiPwd = prompt(t("Password"), "launcher");
     } else if (target === "ssid") {
-        wifiSsid = prompt("SSID of your network", "");
-        wifiPwd = prompt("Password of your network", "");
+        wifiSsid = prompt(t("SSID of your network"), "");
+        wifiPwd = prompt(t("Password of your network"), "");
     }
     if (isNullOrEmpty(wifiSsid) || wifiPwd === null) {
-        window.alert("Invalid " + target + " or password");
+        window.alert(t("Invalid credentials.", "Invalid " + target + " or password"));
     } else {
         const xhr = httpRequest("GET", "/wifi?" + target + "=" + wifiSsid + "&pwd=" + wifiPwd, { async: false });
-        _("status").innerHTML = xhr.responseText;
+        _("status").innerHTML = translateStatus(xhr.responseText);
     }
 }
 
 function SDConfig() {
-    const miso = prompt("MISO pin", "");
-    const mosi = prompt("MOSI pin", "");
-    const sck = prompt("SCK pin", "");
-    const cs = prompt("CS pin", "");
+    const miso = prompt(t("MISO pin"), "");
+    const mosi = prompt(t("MOSI pin"), "");
+    const sck = prompt(t("SCK pin"), "");
+    const cs = prompt(t("CS pin"), "");
     if ([miso, mosi, sck, cs].some(isNullOrEmpty)) {
-        window.alert("Invalid pins");
+        window.alert(t("Invalid pins"));
     } else {
         const xhr = httpRequest("GET", "/sdpins?miso=" + miso + "&mosi=" + mosi + "&sck=" + sck + "&cs=" + cs, { async: false });
-        _("status").innerHTML = xhr.responseText;
+        _("status").innerHTML = translateStatus(xhr.responseText);
     }
 }
 function startUpdate(fileName) {
@@ -138,10 +296,12 @@ function startUpdate(fileName) {
 }
 function callOTA() {
     _currentSection = 'ota';
+    _otaFile = null;
+    _otaManifest = null;
     const formdata = new FormData();
     formdata.append("update", 1);
     httpRequest("POST", "/OTA", { async: false, body: formdata });
-    _("detailsheader").innerHTML = "<h3>OTA Update</h3>";
+    _("detailsheader").innerHTML = "<h3>" + t("OTA Update") + "</h3>";
     _("status").innerHTML = "";
     _("details").innerHTML = "";
     _("updetailsheader").innerHTML = "";
@@ -213,7 +373,11 @@ function buildOtaManifest(file, partitions) {
         }))
     };
 }
+let _otaFile = null;
+let _otaManifest = null;
 function renderOtaActions(file, manifest) {
+    _otaFile = file;
+    _otaManifest = manifest;
     const outputDiv = _('analysisOutput');
     const spiffsInfo = _('spiffsInfo');
     outputDiv.innerHTML = '';
@@ -231,19 +395,19 @@ function renderOtaActions(file, manifest) {
     });
 
     if (manifest.parts.length === 0) {
-        outputDiv.textContent = 'No installable partitions found in this file.';
+        outputDiv.textContent = t('No installable partitions found in this file.');
         return;
     }
 
     const button = document.createElement('button');
-    button.textContent = 'Start Update';
+    button.textContent = t('Start Update');
     button.onclick = () => uploadPackage(file, manifest);
     outputDiv.appendChild(button);
 
     if (manifest.parts.some(partition => partition.kind === 'data')) {
         spiffsInfo.style.display = 'block';
         spiffsInfo.innerHTML =
-            '<p><b>Data partition</b>: this can be SPIFFS, LittleFS, or FAT depending on the firmware package.</p>';
+            '<p><b>' + t('Data partition') + '</b>: this can be SPIFFS, LittleFS, or FAT depending on the firmware package.</p>';
     }
 }
 function analyzeFile() {
@@ -252,11 +416,11 @@ function analyzeFile() {
     outputDiv.style.display = 'none';
     let pass = true;
     if (fileInput.files.length === 0) {
-        window.alert('Please, select a file.');
+        window.alert(t('Please, select a file.'));
         return;
     }
     if (fileInput.files[0].name.split('.').pop() !== "bin") {
-        window.alert('File is not a .bin');
+        window.alert(t('File is not a .bin'));
         return;
     }
     const file = fileInput.files[0];
@@ -331,14 +495,14 @@ function analyzeFile() {
     reader.readAsArrayBuffer(file);
 }
 function uploadPackage(file, manifest) {
-    _("updetails").innerHTML = "Preparing...";
+    _("updetails").innerHTML = t("Preparing...");
     totalFiles = 1;
     completedFiles = 0;
     const ajax = new XMLHttpRequest();
     ajax.onload = function () {
         if (ajax.status === 200 && ajax.responseText === "OK") {
             const fileProgressDiv = document.createElement("div");
-            fileProgressDiv.innerHTML = `<p>Updating...</p><p><progress id="otaprb" value="0" max="100" style="width:100%;"></progress></p>`;
+            fileProgressDiv.innerHTML = `<p>${t("Updating...")}</p><p><progress id="otaprb" value="0" max="100" style="width:100%;"></progress></p>`;
             _("updetails").appendChild(fileProgressDiv);
             const formdata2 = new FormData();
             formdata2.append("file1", file, file.name);
@@ -348,9 +512,9 @@ function uploadPackage(file, manifest) {
                 const p = (event.loaded / event.total) * 100;
                 _("otaprb").value = Math.round(p);
             }, false);
-            ajax2.addEventListener("load", function () { _("status").innerHTML = "Instalation Complete, Restart your device!"; }, false);
-            ajax2.addEventListener("error", function () { _("status").innerHTML = "Upload Failed"; }, false);
-            ajax2.addEventListener("abort", function () { _("status").innerHTML = "Upload Aborted"; }, false);
+            ajax2.addEventListener("load", function () { _("status").innerHTML = t("Installation complete, restart your device!"); }, false);
+            ajax2.addEventListener("error", function () { _("status").innerHTML = t("Upload Failed"); }, false);
+            ajax2.addEventListener("abort", function () { _("status").innerHTML = t("Upload Aborted"); }, false);
             ajax2.send(formdata2);
         }
     };
@@ -369,7 +533,7 @@ function logoutButton() {
     setTimeout(function () { window.open("/logged-out", "_self"); }, 500);
 }
 function rebootButton() {
-    if (confirm("Confirm Restart?!")) {
+    if (confirm(t("Confirm Restart?!"))) {
         httpRequest("GET", "/reboot");
     }
 }
@@ -383,7 +547,7 @@ function systemInfo() {
                     const data = JSON.parse(xhr.responseText);
                     _("firmwareVersion").innerHTML = data.VERSION;
                     _sdInfo = data.SD;
-                    if (_currentSection === 'files') _("detailsheader").innerHTML = "<h3>Files</h3>" + sdUsageBar();
+                    if (_currentSection === 'files') _("detailsheader").innerHTML = "<h3>" + t("Files") + "</h3>" + sdUsageBar();
                 } catch (error) {
                     console.error("JSON Parsing Error: ", error);
                 }
@@ -399,11 +563,11 @@ function sdUsageBar() {
     if (!_sdInfo || !_sdInfo.totalBytes) return '';
     const usedPct = (_sdInfo.usedBytes / _sdInfo.totalBytes) * 100;
     const freePct = 100 - usedPct;
-    return `<div class="pman-bar"><div class="pman-seg pman-data" style="width:${usedPct}%" title="Used (${_sdInfo.used})"></div><div class="pman-seg pman-free" style="width:${freePct}%" title="Free (${_sdInfo.free})"></div></div>` +
+    return `<div class="pman-bar"><div class="pman-seg pman-data" style="width:${usedPct}%" title="${t('Used')} (${_sdInfo.used})"></div><div class="pman-seg pman-free" style="width:${freePct}%" title="${t('Free')} (${_sdInfo.free})"></div></div>` +
         `<div class="row pman-legend">` +
-        `<span><i class="pman-dot pman-data"></i>Used <b style="color:var(--fg)">${_sdInfo.used}</b></span>` +
-        `<span><i class="pman-dot pman-free"></i>Free <b style="color:var(--fg)">${_sdInfo.free}</b></span>` +
-        `<span>Total <b style="color:var(--fg)">${_sdInfo.total}</b></span></div>`;
+        `<span><i class="pman-dot pman-data"></i>${t('Used')} <b style="color:var(--fg)">${_sdInfo.used}</b></span>` +
+        `<span><i class="pman-dot pman-free"></i>${t('Free')} <b style="color:var(--fg)">${_sdInfo.free}</b></span>` +
+        `<span>${t('Total')} <b style="color:var(--fg)">${_sdInfo.total}</b></span></div>`;
 }
 function listFilesButton(folders) {
     _currentSection = 'files';
@@ -416,7 +580,7 @@ function listFilesButton(folders) {
             if (xhr.status === 200) {
                 const responseText = xhr.responseText;
                 const lines = responseText.split('\n');
-                let tableContent = "<table><tr><th>Name</th><th class='sz'>Size</th><th class='ac'></th><th class='mb'></th></tr>\n";
+                let tableContent = "<table><tr><th>" + t("Name") + "</th><th class='sz'>" + t("Size") + "</th><th class='ac'></th><th class='mb'></th></tr>\n";
                 tableContent += "<tr><td colspan='4'><a onclick=\"listFilesButton('" + previousFolder + "')\" href='javascript:void(0);'>&#8592; ..</a></td></tr>\n";
                 let folder = "";
                 const foldersArray = [];
@@ -461,6 +625,7 @@ function listFilesButton(folders) {
                 });
                 tableContent += "</table>";
                 _("details").innerHTML = tableContent;
+                translateRenderedText(_("details"));
             } else {
                 console.error("Request Error: " + xhr.status);
             }
@@ -469,13 +634,13 @@ function listFilesButton(folders) {
             console.error("Network error while fetching file list.");
         }
     });
-    _("detailsheader").innerHTML = "<h3>Files</h3>" + sdUsageBar();
+    _("detailsheader").innerHTML = "<h3>" + t("Files") + "</h3>" + sdUsageBar();
     _("updetailsheader").innerHTML =
         "<input type='file' id='fa' multiple style='display:none'>" +
         "<input type='file' id='fol' webkitdirectory directory multiple style='display:none'>" +
-        "<div class='row' style='margin:6px 0'><button onclick=\"_('fa').click()\">&#8679; Files</button>" +
-        "<button onclick=\"_('fol').click()\">&#128193; Folder</button>" +
-        "<button onclick=\"CreateFolder('" + folders + "')\">+ New Folder</button></div>";
+        "<div class='row' style='margin:6px 0'><button onclick=\"_('fa').click()\">&#8679; " + t("Files") + "</button>" +
+        "<button onclick=\"_('fol').click()\">&#128193; " + t("Folder") + "</button>" +
+        "<button onclick=\"CreateFolder('" + folders + "')\">" + t("+ New Folder") + "</button></div>";
     _("fa").onchange = e => handleFileForm(e.target.files, folders);
     _("fol").onchange = e => handleFileForm(e.target.files, folders);
     _("updetails").innerHTML = "";
@@ -485,9 +650,9 @@ function listFilesButton(folders) {
 }
 function renameFile(filePath, oldName) {
     const actualFolder = _("actualFolder").value;
-    const fileName = prompt("Enter the new name: ", oldName);
+    const fileName = prompt(t("Enter the new name: "), oldName);
     if (isNullOrEmpty(fileName)) {
-        window.alert("Invalid Name");
+        window.alert(t("Invalid Name"));
     } else {
         const formdata5 = new FormData();
         formdata5.append("filePath", filePath);
@@ -502,7 +667,7 @@ function downloadDeleteButton(filename, action) {
     const actualFolder = _("actualFolder").value;
     const isDelete = action === "delete";
     if (isDelete || action === "create") {
-        if (!isDelete || confirm("Do you really want to DELETE the file: " + filename + " ?\n\nThis action can't be undone!")) {
+        if (!isDelete || confirm(t("Do you really want to DELETE the file: ") + filename + " ?\n\n" + t("This action can't be undone!"))) {
             const xhr = httpRequest("GET", urltocall, { async: false });
             _("status").innerHTML = xhr.responseText;
             listFilesButton(actualFolder);
@@ -515,9 +680,9 @@ function downloadDeleteButton(filename, action) {
     }
 }
 function CreateFolder(folders) {
-    const folderName = prompt("Folder Name", "");
+    const folderName = prompt(t("Folder Name"), "");
     if (isNullOrEmpty(folderName)) {
-        window.alert("Invalid Folder Name");
+        window.alert(t("Invalid Folder Name"));
     } else {
         downloadDeleteButton(_("actualFolder").value + "/" + folderName, 'create');
     }
@@ -581,6 +746,7 @@ function FileTree(item, path = "", filesQ) {
     });
 }
 window.addEventListener("load", () => {
+    loadLanguage();
     listFilesButton("/");
     systemInfo();
 });
@@ -602,7 +768,7 @@ function processNextUpload(folder) {
     if (fileQueue.length === 0) {
         if (activeUploads === 0) {
             _('upmodal').classList.remove('open');
-            _("status").innerHTML = "Upload Complete";
+            _("status").innerHTML = t("Upload Complete");
             const actualFolder = _("actualFolder").value;
             listFilesButton(actualFolder);
         }
@@ -615,12 +781,12 @@ function processNextUpload(folder) {
         .then(() => {
             activeUploads--;
             completedFiles++;
-            _("status").innerHTML = `Uploaded ${completedFiles} of ${totalFiles} files.`;
+            _("status").innerHTML = `${t("Uploaded")} ${completedFiles} ${t("of")} ${totalFiles} ${t("files.")}`;
             processNextUpload(folder);
         })
         .catch((error) => {
             activeUploads--;
-            _("status").innerHTML = error || "Upload Failed";
+            _("status").innerHTML = translateStatus(error) || t("Upload Failed");
             processNextUpload(folder);
         });
 }
@@ -643,7 +809,7 @@ function uploadFile(folder, file) {
             if (ajax.status === 200 && ajax.responseText === "OK") {
                 resolve();
             } else {
-                reject(ajax.responseText || "Upload failed");
+                reject(ajax.responseText || t("Upload failed"));
             }
         }, false);
         ajax.addEventListener("error", () => reject(), false);
@@ -670,14 +836,14 @@ function partitionsPost(params, onDone) {
             if (xhr.status === 200) {
                 if (typeof onDone === 'function') onDone(xhr);
             } else {
-                _("status").innerHTML = xhr.responseText || 'Failed';
+                _("status").innerHTML = translateStatus(xhr.responseText || t('Failed'));
             }
         }
     });
 }
 function loadPartitions() {
     _currentSection = 'partitions';
-    _("detailsheader").innerHTML = "<h3>Partition Manager</h3>";
+    _("detailsheader").innerHTML = "<h3>" + t("Partition Manager") + "</h3>";
     _("status").innerHTML = "";
     _("OTAdetails").style.display = 'none';
     _("analysisOutput").style.display = 'none';
@@ -685,10 +851,10 @@ function loadPartitions() {
     _("updetailsheader").innerHTML = "";
     _("updetails").innerHTML = "";
     _("drop-area").style.display = 'block';
-    _("details").innerHTML = "Loading...";
+    _("details").innerHTML = t("Loading...");
     httpRequest("GET", "/partitions", {
         onload: (xhr) => {
-            if (xhr.status !== 200) { _("details").innerHTML = "Failed to load partitions."; return; }
+            if (xhr.status !== 200) { _("details").innerHTML = t("Failed to load partitions."); return; }
             _pmanData = JSON.parse(xhr.responseText);
             pmanRender(_pmanData);
         }
@@ -701,53 +867,53 @@ function pmanUsageBar(data) {
         if (size <= 0) return;
         segs += `<div class="pman-seg ${cls}" style="width:${(size / data.flashSize) * 100}%" title="${title}"></div>`;
     };
-    if (items.length && items[0].offset > 0) addSeg(items[0].offset, 'pman-sys', 'System (bootloader, nvs, otadata...)');
+    if (items.length && items[0].offset > 0) addSeg(items[0].offset, 'pman-sys', t('System (bootloader, nvs, otadata...)'));
     items.forEach((e, i) => {
         addSeg(e.size, e.type === 0 ? 'pman-app' : 'pman-data', `${e.label} (${pmanSize(e.size)})`);
         const next = items[i + 1];
         const gapEnd = next ? next.offset : data.flashSize;
         const gapStart = e.offset + e.size;
-        addSeg(gapEnd - gapStart, 'pman-free', `Free (${pmanSize(gapEnd - gapStart)})`);
+        addSeg(gapEnd - gapStart, 'pman-free', `${t('Free')} (${pmanSize(gapEnd - gapStart)})`);
     });
     return `<div class="pman-bar">${segs}</div>` +
         `<div class="row pman-legend">` +
-        `<span><i class="pman-dot pman-app"></i>App</span>` +
-        `<span><i class="pman-dot pman-data"></i>Data</span>` +
-        `<span><i class="pman-dot pman-free"></i>Free</span>` +
-        `<span><i class="pman-dot pman-sys"></i>System</span></div>`;
+        `<span><i class="pman-dot pman-app"></i>${t('App')}</span>` +
+        `<span><i class="pman-dot pman-data"></i>${t('Data')}</span>` +
+        `<span><i class="pman-dot pman-free"></i>${t('Free')}</span>` +
+        `<span><i class="pman-dot pman-sys"></i>${t('System')}</span></div>`;
 }
 function pmanRowActions(e) {
-    let a = `<span style="cursor:pointer" onclick="pmanDetails(${e.offset})" title="Details">&#8505;</span>`;
+    let a = `<span style="cursor:pointer" onclick="pmanDetails(${e.offset})" title="${t('Details')}">&#8505;</span>`;
     if (e.protected) return a;
-    a += `&nbsp;<span style="cursor:pointer" onclick="pmanResize(${e.offset})" title="Resize">&#8596;</span>`;
+    a += `&nbsp;<span style="cursor:pointer" onclick="pmanResize(${e.offset})" title="${t('Resize')}">&#8596;</span>`;
     if (e.type === 1) {
-        a += `&nbsp;<span style="cursor:pointer" onclick="pmanBackup('${e.label}')" title="Backup">&#128190;</span>` +
-             `&nbsp;<span style="cursor:pointer" onclick="pmanRestore('${e.label}')" title="Restore">&#8635;</span>` +
-             `&nbsp;<span style="cursor:pointer" onclick="pmanFormat(${e.offset},'${e.label}')" title="Format">&#9099;</span>`;
+        a += `&nbsp;<span style="cursor:pointer" onclick="pmanBackup('${e.label}')" title="${t('Backup')}">&#128190;</span>` +
+             `&nbsp;<span style="cursor:pointer" onclick="pmanRestore('${e.label}')" title="${t('Restore')}">&#8635;</span>` +
+             `&nbsp;<span style="cursor:pointer" onclick="pmanFormat(${e.offset},'${e.label}')" title="${t('Format')}">&#9099;</span>`;
     }
-    a += `&nbsp;<span style="cursor:pointer" onclick="pmanDelete(${e.offset},'${e.label}')" title="Remove">&#128465;</span>`;
+    a += `&nbsp;<span style="cursor:pointer" onclick="pmanDelete(${e.offset},'${e.label}')" title="${t('Remove')}">&#128465;</span>`;
     return a;
 }
 function pmanRender(data) {
     let toolbar = '<div class="row" style="margin:8px 0">' +
-        '<button onclick="pmanCreate(0,16,\'app\',1024)">+ OTA App</button>' +
-        '<button onclick="pmanCreate(1,129,\'vfs\',512)">+ FAT</button>' +
+        '<button onclick="pmanCreate(0,16,\'app\',1024)">+ ' + t('OTA App') + '</button>' +
+        '<button onclick="pmanCreate(1,129,\'vfs\',512)">+ ' + t('FAT') + '</button>' +
         '<button onclick="pmanCreate(1,130,\'spiffs\',256)">+ SPIFFS</button>';
     if (data.dirty) {
-        toolbar += '<button onclick="pmanApply()" style="color:var(--ac);border-color:var(--ac)">&#10003; Apply Changes</button>' +
-            '<button onclick="pmanDiscard()">&#8634; Discard Changes</button>';
+        toolbar += '<button onclick="pmanApply()" style="color:var(--ac);border-color:var(--ac)">&#10003; ' + t('Apply Changes') + '</button>' +
+            '<button onclick="pmanDiscard()">&#8634; ' + t('Discard Changes') + '</button>';
     }
     toolbar += '</div>';
-    if (data.dirty) toolbar += '<p style="color:var(--yw)">Unsaved changes — nothing is written to flash until you Apply.</p>';
+    if (data.dirty) toolbar += '<p style="color:var(--yw)">' + t('Unsaved changes — nothing is written to flash until you Apply.') + '</p>';
 
-    let table = '<table><tr><th>Partition</th><th class="sz">Size</th><th class="ac"></th><th class="mb"></th></tr>\n';
+    let table = '<table><tr><th>' + t('Partition') + '</th><th class="sz">' + t('Size') + '</th><th class="ac"></th><th class="mb"></th></tr>\n';
     data.entries.forEach((e) => {
-        const badges = (e.protected ? ' <span class="tag" style="opacity:.65">protected</span>' : '') +
-            (e.running ? ' <span class="tag" style="color:var(--ac)">running</span>' : '');
-        const appInfo = e.appName ? `<br><span style="color:var(--dim);font-size:.75rem">Firmware: ${e.appName}</span>` : '';
+        const badges = (e.protected ? ' <span class="tag" style="opacity:.65">' + t('protected') + '</span>' : '') +
+            (e.running ? ' <span class="tag" style="color:var(--ac)">' + t('running') + '</span>' : '');
+        const appInfo = e.appName ? `<br><span style="color:var(--dim);font-size:.75rem">${t('Firmware: ')}${e.appName}</span>` : '';
         const dataInfo = (e.dataLabels && e.dataLabels.length) ?
-            `<br><span style="color:var(--dim);font-size:.75rem">Data partition: ${e.dataLabels.join(', ')}</span>` :
-            (e.type === 0 ? `<br><span style="color:var(--dim);font-size:.75rem">No data partition</span>` : '');
+            `<br><span style="color:var(--dim);font-size:.75rem">${t('Data partition: ')}${e.dataLabels.join(', ')}</span>` :
+            (e.type === 0 ? `<br><span style="color:var(--dim);font-size:.75rem">${t('No data partition')}</span>` : '');
         const label = `<b>${e.label}</b> <span style="color:var(--dim);font-size:.75rem">${e.typeName}/${e.subtypeName}</span>${badges}${appInfo}${dataInfo}`;
         const actions = pmanRowActions(e);
         table += `<tr><td>${label}</td><td class="sz">${pmanSize(e.size)}</td><td class="ac">${actions}</td>` +
@@ -758,25 +924,26 @@ function pmanRender(data) {
 
     let freeHtml = '';
     if (data.freeRanges && data.freeRanges.length) {
-        freeHtml = '<h3 style="margin-top:14px">Free Space</h3><table>' +
-            '<tr><th>Offset</th><th class="sz">Size</th></tr>' +
+        freeHtml = '<h3 style="margin-top:14px">' + t('Free Space') + '</h3><table>' +
+            '<tr><th>' + t('Offset') + '</th><th class="sz">' + t('Size') + '</th></tr>' +
             data.freeRanges.map((r) => `<tr><td>${pmanHex(r.offset)}</td><td class="sz">${pmanSize(r.size)}</td></tr>`).join('') +
             '</table>';
     }
 
     _("details").innerHTML = pmanUsageBar(data) + toolbar + table + freeHtml;
+    translateRenderedText(_("details"));
 }
 function pmanDetails(offset) {
     const e = _pmanData.entries.find((x) => x.offset === offset);
     if (!e) return;
     window.alert(
-        'Label: ' + e.label +
-        '\nType: ' + e.typeName + '/' + e.subtypeName +
-        '\nOffset: ' + pmanHex(e.offset) +
-        '\nSize: ' + pmanHex(e.size) + ' (' + pmanSize(e.size) + ')' +
-        '\nFlags: ' + pmanHex(e.flags) +
-        (e.appName ? '\nFirmware: ' + e.appName : '') +
-        (e.dataLabels && e.dataLabels.length ? '\nData partition: ' + e.dataLabels.join(', ') : '')
+        t('Label: ') + e.label +
+        '\n' + t('Type: ') + e.typeName + '/' + e.subtypeName +
+        '\n' + t('Offset: ') + pmanHex(e.offset) +
+        '\n' + t('Size: ') + pmanHex(e.size) + ' (' + pmanSize(e.size) + ')' +
+        '\n' + t('Flags: ') + pmanHex(e.flags) +
+        (e.appName ? '\n' + t('Firmware: ') + e.appName : '') +
+        (e.dataLabels && e.dataLabels.length ? '\n' + t('Data partition: ') + e.dataLabels.join(', ') : '')
     );
 }
 let _pmanResizeEntry = null;
@@ -789,9 +956,9 @@ function pmanResize(offset) {
     const maxSize = e.maxOffset - e.offset;
     const value = Math.min(Math.max(e.size, minSize), maxSize);
 
-    _('pmanResizeTitle').textContent = 'Resize ' + e.label;
+    _('pmanResizeTitle').textContent = t('Resize') + ' ' + e.label;
     _('pmanResizeBody').innerHTML =
-        `<p class="pman-resize-range">Range: ${pmanHex(minSize)} - ${pmanHex(maxSize)} (step ${pmanHex(alignment)})</p>` +
+        `<p class="pman-resize-range">${t('Range: ')}${pmanHex(minSize)} - ${pmanHex(maxSize)} (step ${pmanHex(alignment)})</p>` +
         `<input type="range" id="pmanResizeSlider" min="${minSize}" max="${maxSize}" step="${alignment}" value="${value}" oninput="pmanResizeUpdate()">` +
         `<div class="pman-resize-vals"><b id="pmanResizeHex"></b><span id="pmanResizeHuman" style="color:var(--dim)"></span></div>`;
     pmanResizeUpdate();
@@ -809,57 +976,57 @@ function pmanResizeConfirm() {
     partitionsPost({ action: 'resize', offset: _pmanResizeEntry.offset, size }, () => loadPartitions());
 }
 function pmanCreate(type, subtype, defaultLabel, defaultSizeKb) {
-    const label = prompt('Partition label:', defaultLabel);
+    const label = prompt(t('Partition label:'), defaultLabel);
     if (isNullOrEmpty(label)) return;
-    const sizeKb = prompt('Size in KB:', defaultSizeKb);
+    const sizeKb = prompt(t('Size in KB:'), defaultSizeKb);
     if (isNullOrEmpty(sizeKb)) return;
     const size = parseInt(sizeKb) * 1024;
-    if (!size || size <= 0) { window.alert('Invalid size'); return; }
+    if (!size || size <= 0) { window.alert(t('Invalid size')); return; }
     partitionsPost({ action: 'create', type, subtype, label, size }, () => loadPartitions());
 }
 function pmanDelete(offset, label) {
-    if (!confirm(`Remove partition "${label}"?\n\nThis is staged until you Apply Changes.`)) return;
+    if (!confirm(t('Remove partition') + ` "${label}"?\n\n` + t('This is staged until you Apply Changes.'))) return;
     partitionsPost({ action: 'delete', offset }, () => loadPartitions());
 }
 function pmanFormat(offset, label) {
-    if (!confirm(`Erase all data on "${label}" now?\n\nThis happens immediately and can't be undone.`)) return;
+    if (!confirm(t('Erase all data on') + ` "${label}" now?\n\n` + t("This happens immediately and can't be undone."))) return;
     partitionsPost({ action: 'format', offset }, () => loadPartitions());
 }
 function pmanApply() {
-    if (!confirm('Write the new partition table and reboot the device now?')) return;
+    if (!confirm(t('Write the new partition table and reboot the device now?'))) return;
     partitionsPost({ action: 'apply' }, () => {
-        _("details").innerHTML = '<p>Partition table written. The device is rebooting...</p>';
+        _("details").innerHTML = '<p>' + t('Partition table written. The device is rebooting...') + '</p>';
         _("status").innerHTML = '';
     });
 }
 function pmanDiscard() {
-    if (!confirm('Discard all pending changes?')) return;
+    if (!confirm(t('Discard all pending changes?'))) return;
     partitionsPost({ action: 'discard' }, () => loadPartitions());
 }
 function pmanBackup(label) {
     partitionsPost({ action: 'backup', label }, (xhr) => {
         const res = JSON.parse(xhr.responseText);
-        _("status").innerHTML = 'Backup saved: ' + res.path;
+        _("status").innerHTML = t('Backup saved: ') + res.path;
     });
 }
 function pmanRestore(label) {
     httpRequest("GET", "/partitions?list=backups&label=" + encodeURIComponent(label), {
         onload: (xhr) => {
-            if (xhr.status !== 200) { _("status").innerHTML = 'Failed to list backups'; return; }
+            if (xhr.status !== 200) { _("status").innerHTML = t('Failed to list backups'); return; }
             const list = (JSON.parse(xhr.responseText).backups) || [];
-            if (!list.length) { window.alert(`No backups found for "${label}"`); return; }
+            if (!list.length) { window.alert(t('No backups found for') + ` "${label}"`); return; }
             let path = list[list.length - 1].path;
             if (list.length > 1) {
                 const options = list.map((b, i) => `${i + 1}: ${b.path}`).join('\n');
-                const choice = prompt('Choose a backup to restore:\n' + options, String(list.length));
+                const choice = prompt(t('Choose a backup to restore:\n') + options, String(list.length));
                 if (isNullOrEmpty(choice)) return;
                 const picked = list[parseInt(choice) - 1];
-                if (!picked) { window.alert('Invalid choice'); return; }
+                if (!picked) { window.alert(t('Invalid choice')); return; }
                 path = picked.path;
             }
-            if (!confirm(`Restore "${label}" from:\n${path}\n\nThis overwrites the current data on the partition.`)) return;
+            if (!confirm(t('Restore') + ` "${label}" ${t('from')}:\n${path}\n\n` + t('This overwrites the current data on the partition.'))) return;
             partitionsPost({ action: 'restore', label, path }, () => {
-                _("status").innerHTML = `Restored ${label} from ${path}`;
+                _("status").innerHTML = t('Restored') + ` ${label} ` + t('from') + ` ${path}`;
             });
         }
     });

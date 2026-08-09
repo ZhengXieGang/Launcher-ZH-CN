@@ -1086,6 +1086,53 @@ esp_err_t systemInfoHandler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+// Language is a device-wide preference shared by the screen and WebUI.  GET is
+// intentionally public so the login page can be localized before authentication;
+// changing it still requires the normal WebUI session.
+esp_err_t languageHandler(httpd_req_t *req) {
+    if (req->method == HTTP_GET) {
+        JsonDocument doc;
+        doc["language"] = uiLanguageCode();
+        JsonArray supported = doc["supported"].to<JsonArray>();
+        supported.add("zh-CN");
+        supported.add("en");
+        String json;
+        serializeJson(doc, json);
+        sendText(req, "application/json", json);
+        return ESP_OK;
+    }
+
+    if (!checkUserWebAuth(req)) return ESP_OK;
+    String body;
+    String requested;
+    if (receiveBody(req, body, 1024)) {
+        const String contentType = headerValue(req, "Content-Type");
+        if (contentType.indexOf("application/json") >= 0) {
+            JsonDocument doc;
+            if (!deserializeJson(doc, body)) requested = doc["language"].as<String>();
+        } else {
+            WebParamMap params;
+            parseUrlEncoded(body, params);
+            requested = params.get("language");
+        }
+    }
+    if (!uiIsSupportedLanguage(requested)) {
+        sendText(req, 400, "text/plain", "Invalid language");
+        return ESP_OK;
+    }
+    if (!uiSetLanguageCode(requested, true)) {
+        sendText(req, 500, "text/plain", "Failed to save language");
+        return ESP_OK;
+    }
+    saveConfigs();
+    JsonDocument response;
+    response["language"] = uiLanguageCode();
+    String json;
+    serializeJson(response, json);
+    sendText(req, "application/json", json);
+    return ESP_OK;
+}
+
 esp_err_t rebootHandler(httpd_req_t *req) {
     if (checkUserWebAuth(req)) {
         shouldReboot = true;
@@ -1970,6 +2017,8 @@ void configureWebServer() {
     registerHandler("/", HTTP_GET, rootHandler);
     registerHandler("/", HTTP_POST, rootHandler);
     registerHandler("/systeminfo", HTTP_GET, systemInfoHandler);
+    registerHandler("/language", HTTP_GET, languageHandler);
+    registerHandler("/language", HTTP_POST, languageHandler);
     registerHandler("/reboot", HTTP_GET, rebootHandler);
     registerHandler("/listfiles", HTTP_GET, listFilesHandler);
     registerHandler("/file", HTTP_GET, fileHandler);
@@ -2006,7 +2055,7 @@ void startWebUiLoopCommon(bool mode_ap) {
     tft->drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, ALCOLOR);
     tft->fillRoundRect(6, 6, tftWidth - 12, tftHeight - 12, 5, BGCOLOR);
     setTftDisplay(7, 7, ALCOLOR, FP, BGCOLOR);
-    tft->drawCentreString("-= Launcher WebUI =-", tftWidth / 2, 0, 8);
+    uiDrawCentreText(uiTranslate("-= Launcher WebUI =-"), tftWidth / 2, 0, FP);
 #if TFT_HEIGHT < 200
     tft->drawCentreString("http://launcher.local", tftWidth / 2, 17, 1);
     setTftDisplay(7, 26, ~BGCOLOR, FP, BGCOLOR);
@@ -2017,10 +2066,10 @@ void startWebUiLoopCommon(bool mode_ap) {
     tft->setTextSize(FM);
     tft->print("IP ");
     tftprintln(txt, 10, 1);
-    tftprintln("Usr: " + String(wui_usr), 10, 1);
-    tftprintln("Pwd: " + String(wui_pwd), 10, 1);
+    tftprintln(uiTranslate("Usr: ") + String(wui_usr), 10, 1);
+    tftprintln(uiTranslate("Pwd: ") + String(wui_pwd), 10, 1);
     setTftDisplay(7, tftHeight - 39, ALCOLOR, FP);
-    tft->drawCentreString("press Sel to stop", tftWidth / 2, tftHeight - 15, 1);
+    uiDrawCentreText(uiText(UiTextKey::PressSelectToStop), tftWidth / 2, tftHeight - 15, 1);
     tft->display(false);
 
     while (!check(SelPress)) {

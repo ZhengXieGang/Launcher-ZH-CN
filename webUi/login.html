@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -17,16 +17,22 @@ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:c
 </head>
 <body>
 <form class="login-card" action="/login" method="POST">
-    <h1>-= Launcher =-</h1>
+    <h1>-= <span id="brand">Launcher</span> =-</h1>
     <div id="notice"></div>
-    <label for="username">Username</label>
+    <label for="username" id="usernameLabel">Username</label>
     <input id="username" name="username" type="text" autocomplete="username" required>
-    <label for="password">Password</label>
+    <label for="password" id="passwordLabel">Password</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button type="submit">Login</button>
+    <button type="submit" id="loginButton">Login</button>
 </form>
 <script>
-(()=>{const u=document.getElementById("username"),n=document.getElementById("notice"),p=new URLSearchParams(location.search);u.focus();if(p.has("failed")){n.textContent="Usuario ou senha invalidos.";n.style.display="block";}else if(p.has("loggedout")){n.textContent="Sessao encerrada com sucesso.";n.style.display="block";}})();
+(()=>{
+  const u=document.getElementById("username"),n=document.getElementById("notice"),p=new URLSearchParams(location.search);
+  const zh={Username:"用户名",Password:"密码",Login:"登录","Invalid credentials.":"用户名或密码无效。","Session ended successfully.":"已安全注销。"};
+  let lang="zh-CN";
+  const apply=()=>{document.documentElement.lang=lang;["usernameLabel","passwordLabel","loginButton"].forEach(id=>{const e=document.getElementById(id),k=e.textContent;e.textContent=lang==="zh-CN"?(zh[k]||k):k;});if(p.has("failed")){n.textContent=lang==="zh-CN"?zh["Invalid credentials."]:"Invalid credentials.";n.style.display="block";}else if(p.has("loggedout")){n.textContent=lang==="zh-CN"?zh["Session ended successfully."]:"Session ended successfully.";n.style.display="block";}};
+  const x=new XMLHttpRequest();x.open("GET","/language");x.onload=()=>{try{const v=JSON.parse(x.responseText).language;if(v==="en"||v==="zh-CN")lang=v;}catch(_){}apply();u.focus();};x.onerror=()=>{apply();u.focus();};x.send();
+})();
 </script>
 </body>
 </html>

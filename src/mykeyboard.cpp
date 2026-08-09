@@ -476,10 +476,11 @@ String generalKeyboard(
                     chars_counter, tftWidth - ((chars_counter.length() * LW * FP) + 10) - RES / 2, KBLH + 4
                 );
 
-                tft->drawString(
-                    textbox_title.substring(0, max_FP_size - chars_counter.length() - 1),
+                uiDrawText(
+                    uiTranslate(textbox_title).substring(0, max_FP_size - chars_counter.length() - 1),
                     3 + RES / 2,
-                    KBLH + 4
+                    KBLH + 4,
+                    1
                 );
             }
             // Drawing the textbox and the currently typed string

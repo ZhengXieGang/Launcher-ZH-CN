@@ -6,6 +6,7 @@
 #include "idf/idf_update.h"
 #include "idf/launcher_platform.h"
 #include "littlefs_patch.h"
+#include "localization.h"
 #include "mykeyboard.h"
 #include "partition_table_model.h"
 #include "ram_profile.h"
@@ -156,16 +157,16 @@ void drawRangeSlider(
     tft->fillRect(endX - 2, barY - 6, 5, 22, moveStart >= 0 ? (moveStart ? LIGHTGREY : FGCOLOR) : LIGHTGREY);
 
     tft->setTextColor(moveStart >= 0 ? FGCOLOR : BGCOLOR, moveStart >= 0 ? BGCOLOR : FGCOLOR);
-    tft->drawCentreString(" Confirm/Exit ", tftWidth / 2, barY + 16, 1);
+    uiDrawCentreText(uiTranslate(" Confirm/Exit "), tftWidth / 2, barY + 16, 1);
 
     tft->setTextColor(ALCOLOR, BGCOLOR);
 
     // Spread the three hints into left/centre/right columns so they
     // line up cleanly across the width (matches the touch footer layout).
     const int hintY = tftHeight - (LH * FP + 8);
-    tft->drawString("[Prev/Next move]", 8, hintY);
-    tft->drawCentreString("[Sel ok]", tftWidth / 2, hintY, 1);
-    tft->drawRightString("[Esc cancel]", tftWidth - 8, hintY, 1);
+    uiDrawText(uiTranslate("[Prev/Next move]"), 8, hintY, 1);
+    uiDrawCentreText(uiTranslate("[Sel ok]"), tftWidth / 2, hintY, 1);
+    uiDrawRightText(uiTranslate("[Esc cancel]"), tftWidth - 8, hintY, 1);
 }
 
 bool rangeSlider(
