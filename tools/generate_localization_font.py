@@ -17,20 +17,17 @@ from PIL import Image, ImageDraw, ImageFont
 CELL_SIZE = 12
 INNER_SIZE = 11
 BITMAP_BYTES = (CELL_SIZE * CELL_SIZE + 7) // 8
-SOURCE_SUFFIXES = {".c", ".cpp", ".h", ".hpp", ".ino"}
-
-
 def source_codepoints(root: Path) -> list[int]:
+    # The localization catalog is the only firmware source of non-ASCII text
+    # that is intentionally drawn.  Scanning every comment and board note would
+    # silently add Japanese/Portuguese punctuation to every board's binary.
     codepoints: set[int] = set()
-    for source_root in (root / "src", root / "boards"):
-        for path in source_root.rglob("*"):
-            if not path.is_file() or path.suffix not in SOURCE_SUFFIXES:
-                continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                continue
-            codepoints.update(ord(char) for char in text if 0x80 <= ord(char) <= 0xFFFF)
+    path = root / "src" / "localization.cpp"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    codepoints.update(ord(char) for char in text if 0x80 <= ord(char) <= 0xFFFF)
     return sorted(codepoints)
 
 

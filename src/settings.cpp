@@ -33,6 +33,18 @@ namespace {
 // Avoids re-erasing/rewriting the whole l_wifi NVS namespace on every
 // saveConfigs() call when the wifi list itself hasn't changed.
 bool wifiListDirty = true;
+// Settings menus can change several values before returning to the launcher.
+// Keep the edits in RAM and write the SD/NVS mirrors once when the menu exits.
+// This avoids repeatedly rewriting config.conf and the launcher NVS namespace
+// while the user is just moving through one settings session.
+bool settingsMenuDirty = false;
+
+void saveSettingsMenuIfNeeded(bool force = false) {
+    if (!force && !settingsMenuDirty) return;
+    saveConfigs();
+    settingsMenuDirty = false;
+}
+
 uint32_t crc32(const uint8_t *data, size_t length) {
     uint32_t crc = 0xFFFFFFFF;
     while (length--) {
@@ -58,6 +70,50 @@ std::unique_ptr<nvs::NVSHandle> openNamespace(const char *ns, nvs_open_mode_t mo
         return nullptr;
     }
     return handle;
+}
+
+enum class LauncherNvsValueType : uint8_t { I32, U8, U16, I8 };
+
+struct LauncherNvsValue {
+    const char *key;
+    LauncherNvsValueType type;
+    void *value;
+};
+
+esp_err_t setLauncherNvsValue(nvs_handle_t handle, const LauncherNvsValue &item) {
+    switch (item.type) {
+        case LauncherNvsValueType::I32:
+            return nvs_set_i32(handle, item.key, static_cast<int32_t>(*static_cast<const int *>(item.value)));
+        case LauncherNvsValueType::U8:
+            return nvs_set_u8(handle, item.key, *static_cast<const bool *>(item.value) ? 1 : 0);
+        case LauncherNvsValueType::U16:
+            return nvs_set_u16(handle, item.key, *static_cast<const uint16_t *>(item.value));
+        case LauncherNvsValueType::I8:
+            return nvs_set_i8(handle, item.key, *static_cast<const int8_t *>(item.value));
+    }
+    return ESP_ERR_INVALID_ARG;
+}
+
+esp_err_t getLauncherNvsValue(nvs_handle_t handle, const LauncherNvsValue &item) {
+    switch (item.type) {
+        case LauncherNvsValueType::I32:
+            return nvs_get_i32(handle, item.key, reinterpret_cast<int32_t *>(item.value));
+        case LauncherNvsValueType::U8: {
+            uint8_t value = 0;
+            esp_err_t err = nvs_get_u8(handle, item.key, &value);
+            if (err == ESP_OK) *static_cast<bool *>(item.value) = value != 0;
+            return err;
+        }
+        case LauncherNvsValueType::U16:
+            return nvs_get_u16(handle, item.key, static_cast<uint16_t *>(item.value));
+        case LauncherNvsValueType::I8:
+            return nvs_get_i8(handle, item.key, static_cast<int8_t *>(item.value));
+    }
+    return ESP_ERR_INVALID_ARG;
+}
+
+void keepFirstNvsError(esp_err_t &result, esp_err_t next) {
+    if (result == ESP_OK && next != ESP_OK) result = next;
 }
 
 JsonArray ensureWifiListInternal() {
@@ -142,6 +198,7 @@ void factoryReset() {
     wifiListDirty = true;
     defaultValues();
     saveConfigs();
+    settingsMenuDirty = false;
 }
 } // namespace
 
@@ -334,6 +391,7 @@ static void manageKeyBindings() {
 void settings_menu() {
     int idx = 0;
     returnToMenu = false;
+    settingsMenuDirty = false;
     while (idx >= 0 && !returnToMenu) {
         options = {
 #ifndef E_PAPER_DISPLAY
@@ -346,24 +404,24 @@ void settings_menu() {
             {uiText(UiTextKey::Brightness),
                                    [=]() {
                  setBrightnessMenu();
-                 saveConfigs();
+                 settingsMenuDirty = true;
              }                                                 },
             {uiText(UiTextKey::DimTime),
                                    [=]() {
                  setdimmerSet();
-                 saveConfigs();
+                 settingsMenuDirty = true;
              }                                                 },
 #if !defined(E_PAPER_DISPLAY)
             {uiText(UiTextKey::UiColor),
                                    [=]() {
                  setUiColor();
-                 saveConfigs();
+                 settingsMenuDirty = true;
              }                                                 },
 #endif
 #if !defined(LYLYGO_TDECK_PRO)
             {uiText(UiTextKey::Orientation), [=]() {
                  gsetRotation(true);
-                 saveConfigs();
+                 settingsMenuDirty = true;
              }}
 #endif
         };
@@ -371,29 +429,29 @@ void settings_menu() {
             options.push_back({onlyBins ? "[ ] " + uiText(UiTextKey::SeeAllFiles)
                                         : "[x] " + uiText(UiTextKey::SeeAllFiles), [=]() {
                                    onlyBins = !onlyBins;
-                                   saveConfigs();
+                                   settingsMenuDirty = true;
                                }});
             options.push_back({noDotFiles ? "[ ] " + uiText(UiTextKey::ShowDotfiles)
                                            : "[x] " + uiText(UiTextKey::ShowDotfiles), [=]() {
                                    noDotFiles = !noDotFiles;
-                                   saveConfigs();
+                                   settingsMenuDirty = true;
                                }});
             options.push_back({autoBackup ? "[x] " + uiText(UiTextKey::AutoBackup)
                                            : "[ ] " + uiText(UiTextKey::AutoBackup), [=]() {
                                    autoBackup = !autoBackup;
-                                   saveConfigs();
+                                   settingsMenuDirty = true;
                                }});
         }
 
         options.push_back({bootToApp ? "[ ] " + uiText(UiTextKey::BootToLauncher)
                                      : "[x] " + uiText(UiTextKey::BootToLauncher), [=]() {
                                bootToApp = !bootToApp;
-                               saveConfigs();
+                               settingsMenuDirty = true;
                            }});
         options.push_back({askSpiffs ? "[x] " + uiText(UiTextKey::AskToCopySpiffs)
                                      : "[ ] " + uiText(UiTextKey::AskToCopySpiffs), [=]() {
                                askSpiffs = !askSpiffs;
-                               saveConfigs();
+                               settingsMenuDirty = true;
                            }});
         options.push_back({uiText(UiTextKey::Language), [=]() { setLanguageMenu(); }});
         options.push_back({uiText(UiTextKey::PartitionManager), [=]() { partList(); }});
@@ -405,7 +463,7 @@ void settings_menu() {
         if (dev_mode)
             options.push_back({uiText(UiTextKey::DeactivateDev), [=]() {
                                    dev_mode = false;
-                                   saveConfigs();
+                                   settingsMenuDirty = true;
                                }});
 #if defined(HAS_RESISTIVE_TOUCH)
         options.push_back({uiText(UiTextKey::CalibrateTouch), calibrateTouch});
@@ -417,19 +475,27 @@ void settings_menu() {
         // guard re-arms the bring-up, which only runs at boot, so reboot with it.
         if (!hostedWifiAvailable) {
             options.push_back({uiText(UiTextKey::RetryWifiModule), [=]() {
+                                   saveSettingsMenuIfNeeded();
                                    launcherWifiHostedResetGuard();
                                    releaseHeapObjectsAndReboot();
                                }});
         }
         if (dev_mode) options.push_back({uiText(UiTextKey::ResetConfigsWifi), factoryReset});
-        options.push_back({uiText(UiTextKey::Restart), [=]() { return (void)releaseHeapObjectsAndReboot(); }});
+        options.push_back({uiText(UiTextKey::Restart), [=]() {
+                               saveSettingsMenuIfNeeded();
+                               return (void)releaseHeapObjectsAndReboot();
+                           }});
 #if !defined(CARDPUTER)
-        options.push_back({uiText(UiTextKey::TurnOff), [=]() { powerOff(); }});
+        options.push_back({uiText(UiTextKey::TurnOff), [=]() {
+                               saveSettingsMenuIfNeeded();
+                               powerOff();
+                           }});
 #endif
 
         options.push_back({uiText(UiTextKey::MainMenu), [=]() { returnToMenu = true; }});
         idx = loopOptions(options);
     }
+    saveSettingsMenuIfNeeded();
     tft->drawPixel(0, 0, 0);
     tft->fillScreen(BGCOLOR);
 }
@@ -598,9 +664,6 @@ void setUiColor() {
          }},
     };
     loopOptions(options);
-    // Keep the source string English for the serial diagnostic; displayRedStripe
-    // translates it only when drawing the screen.
-    displayRedStripe("Saving...");
 }
 /*********************************************************************
 **  Function: setdimmerSet
@@ -659,45 +722,56 @@ String get_efuse_mac_as_string() {
 }
 
 bool saveIntoNVS() {
-    esp_err_t err = ESP_OK;
-    auto nvsHandle = openNamespace("launcher", NVS_READWRITE, err);
-    if (!nvsHandle) return false;
+    // Persist the scalar settings and language together with one commit.
+    nvs_handle_t handle = 0;
+    esp_err_t err = nvs_open("launcher", NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        launcherConsolePrintf("Failed to open launcher NVS: %d", err);
+        return false;
+    }
 
-    err |= nvsHandle->set_item("dimtime", dimmerSet);
-    err |= nvsHandle->set_item("bright", bright);
-    err |= nvsHandle->set_item("onlyBins", onlyBins);
-    err |= nvsHandle->set_item("bootToApp", bootToApp);
-    err |= nvsHandle->set_item("noDotFiles", noDotFiles);
-    err |= nvsHandle->set_item("autoBackup", autoBackup);
-    err |= nvsHandle->set_item("askSpiffs", askSpiffs);
-    err |= nvsHandle->set_item("rotation", rotation);
-    err |= nvsHandle->set_item("FGCOLOR", FGCOLOR);
-    err |= nvsHandle->set_item("BGCOLOR", BGCOLOR);
-    err |= nvsHandle->set_item("ALCOLOR", ALCOLOR);
-    err |= nvsHandle->set_item("odd_color", odd_color);
-    err |= nvsHandle->set_item("even_color", even_color);
-    err |= nvsHandle->set_item("dev_mode", dev_mode);
-    err |= nvsHandle->set_string("wui_usr", wui_usr.c_str());
-    err |= nvsHandle->set_string("wui_pwd", wui_pwd.c_str());
-    err |= nvsHandle->set_string("dwn_path", dwn_path.c_str());
-    err |= nvsHandle->set_string("last_app", lastInstalledApp.c_str());
-    err |= nvsHandle->set_string("language", uiLanguageCode());
+    const LauncherNvsValue values[] = {
+        {"dimtime", LauncherNvsValueType::I32, &dimmerSet},
+        {"bright", LauncherNvsValueType::I32, &bright},
+        {"onlyBins", LauncherNvsValueType::U8, &onlyBins},
+        {"bootToApp", LauncherNvsValueType::U8, &bootToApp},
+        {"noDotFiles", LauncherNvsValueType::U8, &noDotFiles},
+        {"autoBackup", LauncherNvsValueType::U8, &autoBackup},
+        {"askSpiffs", LauncherNvsValueType::U8, &askSpiffs},
+        {"rotation", LauncherNvsValueType::I32, &rotation},
+        {"FGCOLOR", LauncherNvsValueType::U16, &FGCOLOR},
+        {"BGCOLOR", LauncherNvsValueType::U16, &BGCOLOR},
+        {"ALCOLOR", LauncherNvsValueType::U16, &ALCOLOR},
+        {"odd_color", LauncherNvsValueType::U16, &odd_color},
+        {"even_color", LauncherNvsValueType::U16, &even_color},
+        {"dev_mode", LauncherNvsValueType::U8, &dev_mode},
 #if defined(HEADLESS)
-    // SD Pins
-    err |= nvsHandle->set_item("miso", _miso);
-    err |= nvsHandle->set_item("mosi", _mosi);
-    err |= nvsHandle->set_item("sck", _sck);
-    err |= nvsHandle->set_item("cs", _cs);
+        {"miso", LauncherNvsValueType::I8, &_miso},
+        {"mosi", LauncherNvsValueType::I8, &_mosi},
+        {"sck", LauncherNvsValueType::I8, &_sck},
+        {"cs", LauncherNvsValueType::I8, &_cs},
 #endif
+    };
+    for (const LauncherNvsValue &value : values) keepFirstNvsError(err, setLauncherNvsValue(handle, value));
+
+    const char *const strings[][2] = {
+        {"wui_usr", wui_usr.c_str()},
+        {"wui_pwd", wui_pwd.c_str()},
+        {"dwn_path", dwn_path.c_str()},
+        {"last_app", lastInstalledApp.c_str()},
+        {"language", uiLanguageCode()},
+    };
+    for (const auto &item : strings) keepFirstNvsError(err, nvs_set_str(handle, item[0], item[1]));
     if (err != ESP_OK) {
         launcherConsolePrintf("Failed to store settings in NVS: %d", err);
     } else {
         launcherConsolePrintln("Settings stored in NVS successfully");
     }
 
-    nvsHandle->commit();
+    if (err == ESP_OK) err = nvs_commit(handle);
+    nvs_close(handle);
     if (!saveWifiIntoNVS()) { launcherConsolePrintln("saveIntoNVS: failed to store WiFi list"); }
-    return true;
+    return err == ESP_OK;
 }
 
 bool saveSessionToken(const String &token) {
@@ -810,54 +884,65 @@ void defaultValues() {
     saveIntoNVS();
 }
 bool getFromNVS() {
-    esp_err_t err;
-    std::unique_ptr<nvs::NVSHandle> nvsHandle = nvs::open_nvs_handle("launcher", NVS_READONLY, &err);
+    nvs_handle_t handle = 0;
+    esp_err_t err = nvs_open("launcher", NVS_READONLY, &handle);
     if (err != ESP_OK) {
         // If NVS read fails, set default values
         log_i("Failed to retrieve settings from NVS: %d\nUsing Default values", err);
         defaultValues();
         return false;
     }
-    // Get settings from NVS
-    if (err != ESP_OK) {
-        log_i("Failed to open NVS handle: %d", err);
-        return false;
-    }
-    err = nvsHandle->get_item("dimtime", dimmerSet);
-    err |= nvsHandle->get_item("bright", bright);
-    err |= nvsHandle->get_item("onlyBins", onlyBins);
-    err |= nvsHandle->get_item("bootToApp", bootToApp);
-    err |= nvsHandle->get_item("noDotFiles", noDotFiles);
-    err |= nvsHandle->get_item("autoBackup", autoBackup);
-    err |= nvsHandle->get_item("askSpiffs", askSpiffs);
-    err |= nvsHandle->get_item("rotation", rotation);
-    err |= nvsHandle->get_item("FGCOLOR", FGCOLOR);
-    err |= nvsHandle->get_item("BGCOLOR", BGCOLOR);
-    err |= nvsHandle->get_item("ALCOLOR", ALCOLOR);
-    err |= nvsHandle->get_item("odd_color", odd_color);
-    err |= nvsHandle->get_item("even_color", even_color);
-    err |= nvsHandle->get_item("dev_mode", dev_mode);
+    const LauncherNvsValue values[] = {
+        {"dimtime", LauncherNvsValueType::I32, &dimmerSet},
+        {"bright", LauncherNvsValueType::I32, &bright},
+        {"onlyBins", LauncherNvsValueType::U8, &onlyBins},
+        {"bootToApp", LauncherNvsValueType::U8, &bootToApp},
+        {"noDotFiles", LauncherNvsValueType::U8, &noDotFiles},
+        {"autoBackup", LauncherNvsValueType::U8, &autoBackup},
+        {"askSpiffs", LauncherNvsValueType::U8, &askSpiffs},
+        {"rotation", LauncherNvsValueType::I32, &rotation},
+        {"FGCOLOR", LauncherNvsValueType::U16, &FGCOLOR},
+        {"BGCOLOR", LauncherNvsValueType::U16, &BGCOLOR},
+        {"ALCOLOR", LauncherNvsValueType::U16, &ALCOLOR},
+        {"odd_color", LauncherNvsValueType::U16, &odd_color},
+        {"even_color", LauncherNvsValueType::U16, &even_color},
+        {"dev_mode", LauncherNvsValueType::U8, &dev_mode},
 #if defined(HEADLESS)
-    // SD Pins
-    err |= nvsHandle->get_item("miso", _miso);
-    err |= nvsHandle->get_item("mosi", _mosi);
-    err |= nvsHandle->get_item("sck", _sck);
-    err |= nvsHandle->get_item("cs", _cs);
+        {"miso", LauncherNvsValueType::I8, &_miso},
+        {"mosi", LauncherNvsValueType::I8, &_mosi},
+        {"sck", LauncherNvsValueType::I8, &_sck},
+        {"cs", LauncherNvsValueType::I8, &_cs},
 #endif
-    char buffer[64];
-    err |= nvsHandle->get_string("wui_usr", buffer, sizeof(buffer));
-    wui_usr = String(buffer);
-    err |= nvsHandle->get_string("wui_pwd", buffer, sizeof(buffer));
-    wui_pwd = String(buffer);
-    err |= nvsHandle->get_string("dwn_path", buffer, sizeof(buffer));
-    dwn_path = String(buffer);
+    };
+    for (const LauncherNvsValue &value : values) keepFirstNvsError(err, getLauncherNvsValue(handle, value));
+
+    char buffer[64] = {0};
+    size_t bufferSize = sizeof(buffer);
+    esp_err_t stringErr = nvs_get_str(handle, "wui_usr", buffer, &bufferSize);
+    if (stringErr == ESP_OK) wui_usr = String(buffer);
+    else if (stringErr != ESP_ERR_NVS_NOT_FOUND) keepFirstNvsError(err, stringErr);
+
+    memset(buffer, 0, sizeof(buffer));
+    bufferSize = sizeof(buffer);
+    stringErr = nvs_get_str(handle, "wui_pwd", buffer, &bufferSize);
+    if (stringErr == ESP_OK) wui_pwd = String(buffer);
+    else if (stringErr != ESP_ERR_NVS_NOT_FOUND) keepFirstNvsError(err, stringErr);
+
+    memset(buffer, 0, sizeof(buffer));
+    bufferSize = sizeof(buffer);
+    stringErr = nvs_get_str(handle, "dwn_path", buffer, &bufferSize);
+    if (stringErr == ESP_OK) dwn_path = String(buffer);
+    else if (stringErr != ESP_ERR_NVS_NOT_FOUND) keepFirstNvsError(err, stringErr);
+
     char appBuffer[128] = {0};
-    esp_err_t lastAppErr = nvsHandle->get_string("last_app", appBuffer, sizeof(appBuffer));
+    size_t appBufferSize = sizeof(appBuffer);
+    esp_err_t lastAppErr = nvs_get_str(handle, "last_app", appBuffer, &appBufferSize);
     if (lastAppErr == ESP_OK) lastInstalledApp = String(appBuffer);
     else if (lastAppErr == ESP_ERR_NVS_NOT_FOUND) lastInstalledApp = "";
-    else err |= lastAppErr;
+    else keepFirstNvsError(err, lastAppErr);
     char languageBuffer[16] = {0};
-    esp_err_t languageErr = nvsHandle->get_string("language", languageBuffer, sizeof(languageBuffer));
+    size_t languageBufferSize = sizeof(languageBuffer);
+    esp_err_t languageErr = nvs_get_str(handle, "language", languageBuffer, &languageBufferSize);
     if (languageErr == ESP_OK) {
         // Invalid values deliberately fall back to zh-CN.  Persisting the fallback
         // happens on the next normal settings save, avoiding a second NVS handle here.
@@ -865,8 +950,9 @@ bool getFromNVS() {
     } else if (languageErr == ESP_ERR_NVS_NOT_FOUND) {
         uiSetLanguage(UiLanguage::ChineseSimplified, false);
     } else {
-        err |= languageErr;
+        keepFirstNvsError(err, languageErr);
     }
+    nvs_close(handle);
     // ESP_ERR_NVS_NOT_FOUND is expected after a firmware update adds new settings keys
     // that haven't been written yet. Keep values at their defaults instead of wiping everything.
     if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
@@ -1140,6 +1226,8 @@ void getConfigs() {
 **  save configs into JSON config.conf file
 **********************************************************************/
 void saveConfigs() {
+    // SD writes are intentionally consolidated by the settings menu session;
+    // Callers outside that menu still persist immediately for compatibility.
     if (!sdcardMounted) {
         saveIntoNVS();
         return;
@@ -1157,16 +1245,10 @@ void saveConfigs() {
     if (!setting["favorite"].is<JsonArray>()) favorite = setting.createNestedArray("favorite");
     else favorite = setting["favorite"].as<JsonArray>();
 
-    // Ensure wifi array has at least a placeholder entry
+    // Keep an empty WiFi array empty.  A fake SSID/password wastes SD space
+    // and can be mistaken for a real network by older clients.
     JsonArray wifiList = setting["wifi"].as<JsonArray>();
     if (wifiList.isNull()) wifiList = setting.createNestedArray("wifi");
-    if (!wifiList.isNull() && wifiList.size() == 0) {
-        JsonObject wifiObj = wifiList.add<JsonObject>();
-        if (!wifiObj.isNull()) {
-            wifiObj["ssid"] = ssid.length() == 0 ? "myNetSSID" : ssid;
-            wifiObj["pwd"] = pwd.length() == 0 ? "myNetPassword" : pwd;
-        }
-    }
 
     // Update known settings keys (unknown keys are untouched)
     setting["onlyBins"] = onlyBins;
@@ -1204,7 +1286,9 @@ void saveConfigs() {
     File file = SDM.open(CONFIG_FILE, FILE_WRITE, true);
     size_t written = 0;
     if (file) {
-        written = serializeJsonPretty(settings, file);
+        // Compact JSON is materially smaller on the SD card and avoids pulling
+        // ArduinoJson's pretty-printer into every board's firmware image.
+        written = serializeJson(settings, file);
         file.flush();
         file.close();
     } else {

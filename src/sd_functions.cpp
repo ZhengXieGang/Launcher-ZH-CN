@@ -17,7 +17,9 @@
 #include <esp_image_format.h>
 #include <esp_partition.h>
 #include <globals.h>
+#include <cstring>
 #include <memory>
+#include <utility>
 SPIClass sdcardSPI;
 String fileToCopy;
 String fileToUse;
@@ -231,6 +233,26 @@ bool createFolder(String path) {
 ** Function name: sortList
 ** Description:   sort files/folders by name
 ***************************************************************************************/
+static char foldAscii(char value) {
+    return value >= 'a' && value <= 'z' ? static_cast<char>(value - ('a' - 'A')) : value;
+}
+
+static int compareIgnoreAsciiCase(const char *left, const char *right) {
+    while (*left && *right) {
+        const char a = foldAscii(*left++);
+        const char b = foldAscii(*right++);
+        if (a != b) return a < b ? -1 : 1;
+    }
+    return *left == *right ? 0 : (*left ? 1 : -1);
+}
+
+static bool endsWithIgnoreAsciiCase(const String &value, const char *suffix) {
+    const size_t valueLength = value.length();
+    const size_t suffixLength = std::strlen(suffix);
+    return valueLength >= suffixLength &&
+           compareIgnoreAsciiCase(value.c_str() + valueLength - suffixLength, suffix) == 0;
+}
+
 bool sortList(const Option &a, const Option &b) {
     const uint16_t _folderColor = uint16_t(FGCOLOR - 0x1111);
     bool _a = (a.color == _folderColor); // is folder
@@ -238,12 +260,24 @@ bool sortList(const Option &a, const Option &b) {
     if (_a != _b) {
         return _a > _b; // true if a is a folder and b is not
     }
-    // Order items alphabetically
-    String fa = a.label;
-    fa.toUpperCase();
-    String fb = b.label;
-    fb.toUpperCase();
-    return fa < fb;
+    // Order items alphabetically without allocating uppercase String copies.
+    return compareIgnoreAsciiCase(a.label.c_str(), b.label.c_str()) < 0;
+}
+
+static void sortOptionList(std::vector<Option> &items) {
+    // Shell sort avoids the relatively large std::sort comparator machinery on
+    // small embedded file lists while remaining O(n log^2 n) in the worst case.
+    for (size_t gap = items.size() / 2; gap > 0; gap /= 2) {
+        for (size_t i = gap; i < items.size(); ++i) {
+            Option value = std::move(items[i]);
+            size_t j = i;
+            while (j >= gap && sortList(value, items[j - gap])) {
+                items[j] = std::move(items[j - gap]);
+                j -= gap;
+            }
+            items[j] = std::move(value);
+        }
+    }
 }
 
 /***************************************************************************************
@@ -269,8 +303,8 @@ void readFs(String &folder, std::vector<Option> &opt) {
     while (true) {
         bool isDir;
         String fullPath = root.getNextFileName(&isDir);
-        String nameOnly = fullPath.substring(fullPath.lastIndexOf("/") + 1);
         if (fullPath == "") { break; }
+        String nameOnly = fullPath.substring(fullPath.lastIndexOf("/") + 1);
         // Serial.printf("Path: %s (isDir: %d)\n", fullPath.c_str(), isDir);
 
         uint16_t color = FGCOLOR - 0x1111;
@@ -278,10 +312,7 @@ void readFs(String &folder, std::vector<Option> &opt) {
         if (noDotFiles && nameOnly.startsWith(".")) { continue; }
 
         if (!isDir) {
-            int dotIndex = nameOnly.lastIndexOf(".");
-            String ext = dotIndex >= 0 ? nameOnly.substring(dotIndex + 1) : "";
-            ext.toUpperCase();
-            if (onlyBins && !ext.equals("BIN")) { continue; }
+            if (onlyBins && !endsWithIgnoreAsciiCase(nameOnly, ".bin")) { continue; }
             color = FGCOLOR;
         } else {
             nameOnly = "/" + nameOnly; // add / before folder name
@@ -289,7 +320,7 @@ void readFs(String &folder, std::vector<Option> &opt) {
         opt.push_back({nameOnly, [fullPath]() { fileToUse = fullPath; }, color});
     }
     root.close();
-    std::sort(opt.begin(), opt.end(), sortList);
+    sortOptionList(opt);
     opt.push_back({"> Back", [&]() { fileToUse = ""; }, ALCOLOR});
 }
 #if defined(HAS_KEYBOARD)
@@ -483,9 +514,7 @@ RESTART:
         };
 #if defined(HAS_KEYBOARD)
         {
-            String upperFile = fileToUse;
-            upperFile.toUpperCase();
-            if (upperFile.endsWith(".BIN")) {
+            if (endsWithIgnoreAsciiCase(fileToUse, ".bin")) {
                 opt.insert(opt.begin() + 1, {"Bind to key", [=]() { bindFileToKeyMenu(fileToUse); }});
             }
         }
