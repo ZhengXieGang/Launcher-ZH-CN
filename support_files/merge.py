@@ -1,6 +1,7 @@
 from pathlib import Path
 import csv
 import os
+import shutil
 import subprocess
 from SCons.Script import Import
 
@@ -47,12 +48,80 @@ python_exe = senv.get("PYTHONEXE", "python")
 
 chip_arg = mcu if mcu else "esp32"
 
+_unwind_metadata_stripped = False
+_merge_completed = False
+
+
+def _strip_unused_unwind_metadata():
+    """Strip prebuilt-library unwind metadata and rebuild the app image.
+
+    Arduino/ESP-IDF's precompiled archives still contribute .eh_frame even
+    though this project builds with C++ exceptions and unwind tables disabled.
+    Doing this immediately before the final merge keeps PlatformIO's normal
+    ELF size diagnostics intact while saving the section in the flashed image.
+    """
+    global _unwind_metadata_stripped
+    if _unwind_metadata_stripped:
+        return
+
+    elf = build_dir / "firmware.elf"
+    if not elf.exists():
+        return
+
+    compiler = str(senv.subst("$CXX"))
+    compiler_path = shutil.which(compiler) or compiler
+    objcopy = compiler_path.replace("-g++", "-objcopy")
+    if not shutil.which(objcopy) and not Path(objcopy).exists():
+        print(f"[merge_bin] Cannot find objcopy ({objcopy}); keeping unwind metadata")
+        return
+
+    strip_result = subprocess.run([objcopy, "--remove-section=.eh_frame", str(elf)], check=False)
+    if strip_result.returncode != 0:
+        print("[merge_bin] Failed to strip .eh_frame; keeping the original app image")
+        return
+
+    flash_mode = senv["__get_board_flash_mode"](senv)
+    flash_freq = senv["__get_board_f_image"](senv)
+    flash_size = board_config.get("upload.flash_size") or "4MB"
+    image_cmd = [
+        python_exe,
+        "-m",
+        "esptool",
+        "--chip",
+        chip_arg,
+        "elf2image",
+        "--flash-mode",
+        str(flash_mode),
+        "--flash-freq",
+        str(flash_freq),
+        "--flash-size",
+        str(flash_size),
+        "-o",
+        str(app_bin),
+        str(elf),
+    ]
+    image_env = os.environ.copy()
+    image_env["PYTHONPATH"] = str(esptool_pkg)
+    image_result = subprocess.run(image_cmd, env=image_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if image_result.returncode != 0:
+        print("[merge_bin] Failed to rebuild stripped firmware.bin")
+        if image_result.stderr:
+            print(image_result.stderr.decode(errors="replace"))
+        env.Exit(image_result.returncode)
+    else:
+        _unwind_metadata_stripped = True
+        print("[merge_bin] Stripped .eh_frame from firmware image")
+
 
 def _merge_bins_callback(target, source, env):
     """
     Post-action callback executed after firmware.bin is built.
     Merges bootloader, partitions, and app into a single binary.
     """
+    global _merge_completed
+    if _merge_completed:
+        return
+
     # Check files
     missing = [p for p in [boot_bin, part_bin, app_bin] if not p.exists()]
     if missing:
@@ -60,6 +129,8 @@ def _merge_bins_callback(target, source, env):
         for p in missing:
             print(f" - {p}")
         return
+
+    _strip_unused_unwind_metadata()
 
     # ---- Read partition CSV to get test partition size and ota_0 offset ----
     part_csv_name = board_config.get("build.partitions") or env.GetProjectOption(
@@ -146,6 +217,7 @@ def _merge_bins_callback(target, source, env):
                     f"[Final bin] Error: bin size 0x{size:X} exceeds ota_0 offset 0x{ota0_offset:X}"
                 )
                 env.Exit(1)
+        _merge_completed = True
 
 
 # Automatically run after firmware.bin is generated
