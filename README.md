@@ -102,6 +102,8 @@ Join our [Discord community](https://discord.gg/BE9by2a2FF)
 * 2.8.1:
      * [x] 移除 `phy_init` 分区，并将 NVS 增大到 0x5000
 
+     * [x] Port to [T-Display P4](https://lilygo.cc/products/t-display-p4?bg_ref=sDI8Bh4HmO)
+     * [x] Port to [T-Display C5](https://lilygo.cc/products/t-display-c5?bg_ref=sDI8Bh4HmO)
 * 2.8.0:
      * [x] 移植到 Xueersi-XiaoMiao。
      * [x] Lilygo T-Watch-Ultra 支持 OTA 安装。

@@ -382,7 +382,6 @@ void settings_menu() {
                                            : "[ ] " + uiText(UiTextKey::AutoBackup), [=]() {
                                    autoBackup = !autoBackup;
                                    saveConfigs();
-                                   saveIntoNVS();
                                }});
         }
 
@@ -403,7 +402,11 @@ void settings_menu() {
 #endif
 
         if (dev_mode) options.push_back({uiText(UiTextKey::BootAnimation), [=]() { initDisplayLoop(); }});
-        if (dev_mode) options.push_back({uiText(UiTextKey::DeactivateDev), [=]() { dev_mode = false; }});
+        if (dev_mode)
+            options.push_back({uiText(UiTextKey::DeactivateDev), [=]() {
+                                   dev_mode = false;
+                                   saveConfigs();
+                               }});
 #if defined(HAS_RESISTIVE_TOUCH)
         options.push_back({uiText(UiTextKey::CalibrateTouch), calibrateTouch});
 #endif
