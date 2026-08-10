@@ -861,6 +861,10 @@ bool launcherPartitionIsReplaceableApp(const LauncherPartitionEntry &entry) {
 
 bool launcherPartitionIsRemovableInstallData(const LauncherPartitionEntry &entry) {
     if (!entry.isData()) return false;
+    // MacPlus uses this partition as a raw disk image cache, not as a
+    // filesystem. Keep it stable when Launcher lays out another app; remove
+    // it only through an explicit partition-table edit.
+    if (strcmp(entry.label, "macplus") == 0) return false;
     if (entry.subtype != 0x81 && entry.subtype != 0x82 && entry.subtype != 0x83) return false;
     // FAT partitions are only removable if they use the standard install labels
     if (entry.subtype == 0x81) { return strcmp(entry.label, "sys") == 0 || strcmp(entry.label, "vfs") == 0; }
