@@ -1,11 +1,10 @@
-// WebUI language packages.  Keys are deliberately English and are unrelated to
-// HTTP paths, JSON fields, NVS keys, or protocol commands.
+// Chinese display text keyed by the existing English UI/API strings. HTTP paths,
+// JSON fields, NVS keys and protocol commands remain unchanged.
 const UI_TEXT = {
-    "zh-CN": {
         "Launcher": "启动器", "Menu": "菜单", "Config": "配置", "OTA": "OTA", "Files": "文件",
         "Partitions": "分区", "Firmware list": "固件列表", "NVS Config": "NVS 配置",
         "Save": "保存", "Close": "关闭", "Uploading": "正在上传", "Reboot": "重启", "SD Pins": "SD 引脚",
-        "WiFi": "WiFi", "User/Pass": "用户名/密码", "Logout": "注销", "Language": "语言",
+        "WiFi": "WiFi", "User/Pass": "用户名/密码", "Logout": "注销",
         "OTA Update": "OTA 更新", "Preparing...": "正在准备...", "Updating...": "正在更新...",
         "Start Update": "开始更新", "No installable partitions found in this file.": "文件中没有可安装的分区。",
         "Data partition": "数据分区", "Files": "文件", "Folder": "文件夹", "+ New Folder": "+ 新建文件夹",
@@ -24,8 +23,7 @@ const UI_TEXT = {
         "Invalid size": "大小无效", "Invalid choice": "选择无效", "Failed": "失败", "Failed to list backups": "列出备份失败",
         "Backup saved: ": "备份已保存：", "No backups found for \"": "找不到分区备份：\"",
         "Partition table written. The device is rebooting...": "分区表已写入，设备正在重启...",
-        "Select language": "选择语言", "Simplified Chinese": "简体中文", "English": "English"
-        ,"Used": "已用", "Total": "总计", "Name": "名称", "Size": "大小", "Folder": "文件夹",
+        "Canceled": "已取消", "Used": "已用", "Total": "总计", "Name": "名称", "Size": "大小", "Folder": "文件夹",
         "+ New Folder": "+ 新建文件夹", "Enter the new name: ": "输入新名称：", "Invalid Name": "名称无效",
         "Do you really want to DELETE the file: ": "确定要删除文件：", "This action can't be undone!": "此操作无法撤销！",
         "Folder Name": "文件夹名称", "Invalid Folder Name": "文件夹名称无效"
@@ -52,36 +50,29 @@ const UI_TEXT = {
         "Pins configured.": "引脚配置完成。", "Pins not configured.": "引脚未配置。", "User: ": "用户：",
         "configured with password: ": "已配置密码：", "Flash file system for ESP32. Some apps like": "ESP32 的闪存文件系统，某些应用（例如",
         " require it.": "）需要它。"
-    },
-    "en": {}
 };
-Object.keys(UI_TEXT["zh-CN"]).forEach((key) => {
-    if (!Object.prototype.hasOwnProperty.call(UI_TEXT.en, key)) UI_TEXT.en[key] = key;
-});
-let uiLanguage = "zh-CN";
 function t(key, fallback) {
-    const table = UI_TEXT[uiLanguage] || UI_TEXT["zh-CN"];
-    return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : (fallback === undefined ? key : fallback);
+    return Object.prototype.hasOwnProperty.call(UI_TEXT, key) ? UI_TEXT[key] : (fallback === undefined ? key : fallback);
 }
 function translateStatus(value) {
     if (!value) return value;
-    const table = UI_TEXT[uiLanguage] || {};
-    if (Object.prototype.hasOwnProperty.call(table, value)) return table[value];
-    const keys = Object.keys(table).sort((a, b) => b.length - a.length);
+    if (Object.prototype.hasOwnProperty.call(UI_TEXT, value)) return UI_TEXT[value];
+    const keys = Object.keys(UI_TEXT).sort((a, b) => b.length - a.length);
     for (const key of keys) {
-        if (value.startsWith(key)) return table[key] + value.substring(key.length);
+        if (!value.startsWith(key)) continue;
+        const next = value.charAt(key.length);
+        if (next && /[0-9A-Za-z_]/.test(next)) continue;
+        return UI_TEXT[key] + value.substring(key.length);
     }
     return value;
 }
 function applyLanguage() {
-    document.documentElement.lang = uiLanguage;
+    document.documentElement.lang = 'zh-CN';
     document.querySelectorAll('[data-i18n]').forEach((node) => {
         const key = node.getAttribute('data-i18n');
         if (!node.dataset.i18nDefault) node.dataset.i18nDefault = node.textContent;
         node.textContent = t(key, node.dataset.i18nDefault);
     });
-    const select = _('languageSelect');
-    if (select) select.value = uiLanguage;
     const title = document.querySelector('title[data-i18n]');
     if (title) document.title = t(title.getAttribute('data-i18n'), title.textContent);
     document.querySelectorAll('[data-i18n-title]').forEach((node) => {
@@ -98,46 +89,12 @@ function translateRenderedText(root) {
 }
 function translateRenderedValue(value) {
     let result = value;
-    const target = UI_TEXT[uiLanguage] || UI_TEXT["zh-CN"];
-    const pairs = [];
-    Object.keys(UI_TEXT["zh-CN"]).forEach((key) => {
-        const translated = Object.prototype.hasOwnProperty.call(target, key) ? target[key] : key;
-        pairs.push([key, translated]);
-        const simplified = UI_TEXT["zh-CN"][key];
-        if (simplified !== key) pairs.push([simplified, translated]);
-    });
+    const pairs = Object.entries(UI_TEXT);
     pairs.sort((a, b) => b[0].length - a[0].length);
     pairs.forEach(([source, translated]) => {
         if (source && source !== translated && result.includes(source)) result = result.split(source).join(translated);
     });
     return result;
-}
-function loadLanguage() {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/language');
-    xhr.onload = () => {
-        if (xhr.status !== 200) return;
-        try {
-            const value = JSON.parse(xhr.responseText).language;
-            if (value === 'en' || value === 'zh-CN') uiLanguage = value;
-        } catch (_) { /* keep the default */ }
-        applyLanguage();
-        refreshLocalizedSection();
-    };
-    xhr.send();
-}
-function changeLanguage(value) {
-    if (value !== 'en' && value !== 'zh-CN') return;
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/language');
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.onload = () => {
-        if (xhr.status !== 200) { _('status').textContent = translateStatus(xhr.responseText); return; }
-        uiLanguage = value;
-        applyLanguage();
-        refreshLocalizedSection();
-    };
-    xhr.send('language=' + encodeURIComponent(value));
 }
 function _(e) { return document.getElementById(e); }
 function toggleMenu(){_('menu').classList.toggle('open')}
@@ -746,7 +703,7 @@ function FileTree(item, path = "", filesQ) {
     });
 }
 window.addEventListener("load", () => {
-    loadLanguage();
+    applyLanguage();
     listFilesButton("/");
     systemInfo();
 });

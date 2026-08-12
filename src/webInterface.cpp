@@ -1086,53 +1086,6 @@ esp_err_t systemInfoHandler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-// Language is a device-wide preference shared by the screen and WebUI.  GET is
-// intentionally public so the login page can be localized before authentication;
-// changing it still requires the normal WebUI session.
-esp_err_t languageHandler(httpd_req_t *req) {
-    if (req->method == HTTP_GET) {
-        JsonDocument doc;
-        doc["language"] = uiLanguageCode();
-        JsonArray supported = doc["supported"].to<JsonArray>();
-        supported.add("zh-CN");
-        supported.add("en");
-        String json;
-        serializeJson(doc, json);
-        sendText(req, "application/json", json);
-        return ESP_OK;
-    }
-
-    if (!checkUserWebAuth(req)) return ESP_OK;
-    String body;
-    String requested;
-    if (receiveBody(req, body, 1024)) {
-        const String contentType = headerValue(req, "Content-Type");
-        if (contentType.indexOf("application/json") >= 0) {
-            JsonDocument doc;
-            if (!deserializeJson(doc, body)) requested = doc["language"].as<String>();
-        } else {
-            WebParamMap params;
-            parseUrlEncoded(body, params);
-            requested = params.get("language");
-        }
-    }
-    if (!uiIsSupportedLanguage(requested)) {
-        sendText(req, 400, "text/plain", "Invalid language");
-        return ESP_OK;
-    }
-    if (!uiSetLanguageCode(requested, true)) {
-        sendText(req, 500, "text/plain", "Failed to save language");
-        return ESP_OK;
-    }
-    saveConfigs();
-    JsonDocument response;
-    response["language"] = uiLanguageCode();
-    String json;
-    serializeJson(response, json);
-    sendText(req, "application/json", json);
-    return ESP_OK;
-}
-
 esp_err_t rebootHandler(httpd_req_t *req) {
     if (checkUserWebAuth(req)) {
         shouldReboot = true;
@@ -2017,8 +1970,6 @@ void configureWebServer() {
     registerHandler("/", HTTP_GET, rootHandler);
     registerHandler("/", HTTP_POST, rootHandler);
     registerHandler("/systeminfo", HTTP_GET, systemInfoHandler);
-    registerHandler("/language", HTTP_GET, languageHandler);
-    registerHandler("/language", HTTP_POST, languageHandler);
     registerHandler("/reboot", HTTP_GET, rebootHandler);
     registerHandler("/listfiles", HTTP_GET, listFilesHandler);
     registerHandler("/file", HTTP_GET, fileHandler);

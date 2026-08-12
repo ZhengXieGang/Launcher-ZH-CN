@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Launcher Login</title>
+<title>启动器登录</title>
 <link rel="stylesheet" href="style.css">
 <style>
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#202124;color:#00dd00;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
@@ -17,21 +17,18 @@ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:c
 </head>
 <body>
 <form class="login-card" action="/login" method="POST">
-    <h1>-= <span id="brand">Launcher</span> =-</h1>
+    <h1>-= <span id="brand">启动器</span> =-</h1>
     <div id="notice"></div>
-    <label for="username" id="usernameLabel">Username</label>
+    <label for="username" id="usernameLabel">用户名</label>
     <input id="username" name="username" type="text" autocomplete="username" required>
-    <label for="password" id="passwordLabel">Password</label>
+    <label for="password" id="passwordLabel">密码</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button type="submit" id="loginButton">Login</button>
+    <button type="submit" id="loginButton">登录</button>
 </form>
 <script>
 (()=>{
   const u=document.getElementById("username"),n=document.getElementById("notice"),p=new URLSearchParams(location.search);
-  const zh={Username:"用户名",Password:"密码",Login:"登录","Invalid credentials.":"用户名或密码无效。","Session ended successfully.":"已安全注销。"};
-  let lang="zh-CN";
-  const apply=()=>{document.documentElement.lang=lang;["usernameLabel","passwordLabel","loginButton"].forEach(id=>{const e=document.getElementById(id),k=e.textContent;e.textContent=lang==="zh-CN"?(zh[k]||k):k;});if(p.has("failed")){n.textContent=lang==="zh-CN"?zh["Invalid credentials."]:"Invalid credentials.";n.style.display="block";}else if(p.has("loggedout")){n.textContent=lang==="zh-CN"?zh["Session ended successfully."]:"Session ended successfully.";n.style.display="block";}};
-  const x=new XMLHttpRequest();x.open("GET","/language");x.onload=()=>{try{const v=JSON.parse(x.responseText).language;if(v==="en"||v==="zh-CN")lang=v;}catch(_){}apply();u.focus();};x.onerror=()=>{apply();u.focus();};x.send();
+  if(p.has("failed")){n.textContent="用户名或密码无效。";n.style.display="block";}else if(p.has("loggedout")){n.textContent="已安全注销。";n.style.display="block";}u.focus();
 })();
 </script>
 </body>

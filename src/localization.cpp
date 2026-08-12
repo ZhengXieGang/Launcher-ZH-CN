@@ -3,13 +3,9 @@
 
 #if !defined(LOCALIZATION_HOST_TEST)
 #include "display.h"
-#include "nvs.h"
-#include "nvs_handle.hpp"
 #endif
 
-#include <algorithm>
 #include <cstring>
-#include <memory>
 
 namespace {
 
@@ -19,17 +15,15 @@ struct UiTranslation {
     const char *simplifiedChinese;
 };
 
-// Compatibility aliases cover legacy menu/error literals while the call sites
-// are gradually migrated to UiTextKey.  They deliberately use the same lookup
-// path as keyed text, so adding a language package never requires business
-// logic changes.
+// Compatibility aliases cover legacy menu/error literals while call sites are
+// gradually migrated to UiTextKey.
 struct UiLegacyTranslation {
     const char *english;
     const char *simplifiedChinese;
 };
 
-// Keep this table as the canonical package contract.  The English column is also
-// used by uiTranslate() for legacy call sites that still pass literal strings.
+// English strings are lookup keys used by existing business code. Firmware UI
+// output is always Simplified Chinese.
 constexpr UiTranslation kTranslations[] = {
     {UiTextKey::Launcher, "Launcher", "启动器"},
     {UiTextKey::NoOptions, "No options available", "没有可用选项"},
@@ -71,9 +65,6 @@ constexpr UiTranslation kTranslations[] = {
     {UiTextKey::ResetConfigsWifi, "Reset Configs/Wifi", "重置配置和 WiFi"},
     {UiTextKey::Restart, "Restart", "重启"},
     {UiTextKey::TurnOff, "Turn-off", "关机"},
-    {UiTextKey::Language, "Language", "语言"},
-    {UiTextKey::SimplifiedChinese, "Simplified Chinese", "简体中文"},
-    {UiTextKey::EnglishLanguage, "English", "English"},
     {UiTextKey::Saving, "Saving...", "正在保存..."},
     {UiTextKey::Default, "Default", "默认"},
     {UiTextKey::Red, "Red", "红色"},
@@ -131,6 +122,7 @@ constexpr UiTranslation kTranslations[] = {
 };
 
 constexpr UiLegacyTranslation kLegacyTranslations[] = {
+    {"Canceled", "已取消"},
     {"-= Launcher WebUI =-", "-= 启动器 WebUI =-"},
     {"Usr: ", "用户名："},
     {"Pwd: ", "密码："},
@@ -420,21 +412,10 @@ constexpr UiLegacyTranslation kLegacyTranslations[] = {
     {"Starting calibration..", "正在开始校准..."},
     {"unknown calibrate subcommand", "未知校准子命令"},
     {"Commands:", "命令："},
-    {"language: ", "语言："},
-    {"Language: ", "语言："},
-    {"supported: ", "支持："},
-    {"Supported: ", "支持："},
-    {"invalid language", "语言无效"},
-    {"failed to save language", "保存语言失败"},
-    {"language ", "语言 "},
-    {"language [zh-CN|en]  select the serial/UI language", "language [zh-CN|en]  选择串口/UI 语言"},
     {"unknown command, type 'help' for command list", "未知命令，请输入“help”查看命令列表"},
 };
 
-UiLanguage currentLanguage = UiLanguage::ChineseSimplified;
-
 #if defined(LOCALIZATION_HOST_TEST)
-String hostNvsLanguage;
 String hostLastDrawText;
 int hostLastDrawX = 0;
 #endif
@@ -448,7 +429,7 @@ const UiTranslation *findTranslation(UiTextKey key) {
 
 const UiTranslation *findTranslation(const String &source) {
     for (const UiTranslation &entry : kTranslations) {
-        if (source == entry.english || source == entry.simplifiedChinese) return &entry;
+        if (source == entry.english) return &entry;
     }
     return nullptr;
 }
@@ -467,6 +448,18 @@ int glyphWidth(uint32_t codepoint, uint8_t textSize) {
     if (codepoint == '\t') return 4 * kUiAsciiGlyphWidth * textSize;
     if (codepoint < 0x80) return kUiAsciiGlyphWidth * textSize;
     return kUiWideGlyphWidth * textSize;
+}
+
+bool isPrefixBoundary(const String &source, size_t prefixLength) {
+    if (prefixLength >= static_cast<size_t>(source.length())) return true;
+    const uint8_t last = static_cast<uint8_t>(source.c_str()[prefixLength - 1]);
+    const bool prefixEndsInWord =
+        (last >= '0' && last <= '9') || (last >= 'A' && last <= 'Z') ||
+        (last >= 'a' && last <= 'z') || last == '_';
+    if (!prefixEndsInWord) return true;
+    const uint8_t next = static_cast<uint8_t>(source.c_str()[prefixLength]);
+    return !((next >= '0' && next <= '9') || (next >= 'A' && next <= 'Z') ||
+             (next >= 'a' && next <= 'z') || next == '_');
 }
 
 #if !defined(LOCALIZATION_HOST_TEST)
@@ -540,13 +533,6 @@ void drawPackedGlyph(
     tft->setCursor(x + glyphWidth * cell, y);
 }
 
-void drawAsciiGlyph(uint32_t codepoint, int x, int y, uint8_t textSize) {
-    const size_t index = static_cast<size_t>(codepoint - 0x20U);
-    drawPackedGlyph(
-        kUiAsciiGlyphs[index].bitmap, kUiAsciiGlyphWidth, kUiFontCellHeight, x, y, textSize
-    );
-}
-
 void drawBitmapGlyph(const UiBitmapGlyph &glyph, int x, int y, uint8_t textSize) {
     drawPackedGlyph(
         glyph.bitmap, kUiWideGlyphWidth, kUiFontCellHeight, x, y, textSize
@@ -556,91 +542,18 @@ void drawBitmapGlyph(const UiBitmapGlyph &glyph, int x, int y, uint8_t textSize)
 
 } // namespace
 
-UiLanguage uiLanguage() { return currentLanguage; }
-
-const char *uiLanguageCode() {
-    return currentLanguage == UiLanguage::English ? "en" : "zh-CN";
-}
-
-const char *uiLanguageName(UiLanguage language) {
-    return language == UiLanguage::English ? "English" : "简体中文";
-}
-
-bool uiIsSupportedLanguage(const String &code) {
-    return code == "zh-CN" || code == "zh" || code == "en" || code == "en-US";
-}
-
-UiLanguage uiLanguageFromCode(const String &code) {
-    return code == "en" || code == "en-US" ? UiLanguage::English : UiLanguage::ChineseSimplified;
-}
-
-bool uiSaveLanguageToNVS() {
-#if defined(LOCALIZATION_HOST_TEST)
-    hostNvsLanguage = uiLanguageCode();
-    return true;
-#else
-    esp_err_t err = ESP_OK;
-    std::unique_ptr<nvs::NVSHandle> handle = nvs::open_nvs_handle("launcher", NVS_READWRITE, &err);
-    if (!handle || err != ESP_OK) return false;
-    err = handle->set_string("language", uiLanguageCode());
-    if (err == ESP_OK) err = handle->commit();
-    return err == ESP_OK;
-#endif
-}
-
-bool uiSetLanguage(UiLanguage language, bool persist) {
-    currentLanguage = language == UiLanguage::English ? UiLanguage::English : UiLanguage::ChineseSimplified;
-    return !persist || uiSaveLanguageToNVS();
-}
-
-bool uiSetLanguageCode(const String &code, bool persist) {
-    if (!uiIsSupportedLanguage(code)) {
-        currentLanguage = UiLanguage::ChineseSimplified;
-        return !persist || uiSaveLanguageToNVS();
-    }
-    return uiSetLanguage(uiLanguageFromCode(code), persist);
-}
-
-bool uiLoadLanguageFromNVS() {
-#if defined(LOCALIZATION_HOST_TEST)
-    if (hostNvsLanguage.isEmpty()) {
-        currentLanguage = UiLanguage::ChineseSimplified;
-        return false;
-    }
-    uiSetLanguageCode(hostNvsLanguage, false);
-    return true;
-#else
-    esp_err_t err = ESP_OK;
-    std::unique_ptr<nvs::NVSHandle> handle = nvs::open_nvs_handle("launcher", NVS_READONLY, &err);
-    if (!handle || err != ESP_OK) {
-        currentLanguage = UiLanguage::ChineseSimplified;
-        return false;
-    }
-    char code[16] = {0};
-    err = handle->get_string("language", code, sizeof(code));
-    if (err != ESP_OK) {
-        currentLanguage = UiLanguage::ChineseSimplified;
-        return false;
-    }
-    uiSetLanguageCode(String(code), false);
-    return true;
-#endif
-}
-
 String uiText(UiTextKey key) {
     const UiTranslation *entry = findTranslation(key);
     if (!entry) return "";
-    return currentLanguage == UiLanguage::English ? entry->english : entry->simplifiedChinese;
+    return entry->simplifiedChinese;
 }
 
 String uiTranslate(const String &source) {
     const UiTranslation *entry = findTranslation(source);
-    if (entry) return currentLanguage == UiLanguage::English ? entry->english : entry->simplifiedChinese;
+    if (entry) return entry->simplifiedChinese;
 
     for (const UiLegacyTranslation &legacy : kLegacyTranslations) {
-        if (source == legacy.english || source == legacy.simplifiedChinese) {
-            return currentLanguage == UiLanguage::English ? legacy.english : legacy.simplifiedChinese;
-        }
+        if (source == legacy.english) return legacy.simplifiedChinese;
     }
 
     // Keep parameterized legacy messages localizable without forcing every
@@ -649,33 +562,25 @@ String uiTranslate(const String &source) {
     const UiTranslation *prefix = nullptr;
     size_t prefixLength = 0;
     for (const UiTranslation &candidate : kTranslations) {
-        const char *prefixes[] = {candidate.english, candidate.simplifiedChinese};
-        for (const char *candidatePrefix : prefixes) {
-            const size_t length = strlen(candidatePrefix);
-            if (length > prefixLength && length < static_cast<size_t>(source.length()) &&
-                source.startsWith(candidatePrefix)) {
-                prefix = &candidate;
-                prefixLength = length;
-            }
+        const size_t length = strlen(candidate.english);
+        if (length > prefixLength && length < static_cast<size_t>(source.length()) &&
+            source.startsWith(candidate.english) && isPrefixBoundary(source, length)) {
+            prefix = &candidate;
+            prefixLength = length;
         }
     }
     const UiLegacyTranslation *legacyPrefix = nullptr;
     for (const UiLegacyTranslation &candidate : kLegacyTranslations) {
-        const char *prefixes[] = {candidate.english, candidate.simplifiedChinese};
-        for (const char *candidatePrefix : prefixes) {
-            const size_t length = strlen(candidatePrefix);
-            if (length > prefixLength && length < static_cast<size_t>(source.length()) &&
-                source.startsWith(candidatePrefix)) {
-                legacyPrefix = &candidate;
-                prefix = nullptr;
-                prefixLength = length;
-            }
+        const size_t length = strlen(candidate.english);
+        if (length > prefixLength && length < static_cast<size_t>(source.length()) &&
+            source.startsWith(candidate.english) && isPrefixBoundary(source, length)) {
+            legacyPrefix = &candidate;
+            prefix = nullptr;
+            prefixLength = length;
         }
     }
     if (!prefix && !legacyPrefix) return source;
-    const char *translated = currentLanguage == UiLanguage::English
-                                 ? (prefix ? prefix->english : legacyPrefix->english)
-                                 : (prefix ? prefix->simplifiedChinese : legacyPrefix->simplifiedChinese);
+    const char *translated = prefix ? prefix->simplifiedChinese : legacyPrefix->simplifiedChinese;
     return String(translated) + source.substring(prefixLength);
 }
 
@@ -848,10 +753,6 @@ std::vector<String> uiWrapText(const String &text, int maxWidth, uint8_t textSiz
 }
 
 #if defined(LOCALIZATION_HOST_TEST)
-void uiTestSetNvsLanguage(const String &code) { hostNvsLanguage = code; }
-
-void uiTestClearNvsLanguage() { hostNvsLanguage = ""; }
-
 int uiTestLastDrawX() { return hostLastDrawX; }
 
 String uiTestLastDrawText() { return hostLastDrawText; }
@@ -867,28 +768,25 @@ void uiDrawText(const String &text, int x, int y, uint8_t textSize) {
     if (textSize == 0) textSize = 1;
     tft->setTextSize(textSize);
     tft->setCursor(x, y);
+    String ascii;
     size_t offset = 0;
     while (offset < static_cast<size_t>(text.length())) {
+        const size_t start = offset;
         uint32_t codepoint = 0;
         if (!uiDecodeUtf8(text.c_str(), text.length(), offset, codepoint)) break;
-
-        if (codepoint == '\n') {
-            tft->setCursor(x, tft->getCursorY() + kUiFontCellHeight * textSize);
+        if (codepoint < 0x80) {
+            ascii += text.substring(start, offset);
             continue;
         }
-        if (codepoint == '\r') continue;
-        if (codepoint == '\t') {
-            tft->setCursor(tft->getCursorX() + 4 * kUiAsciiGlyphWidth * textSize, tft->getCursorY());
-            continue;
-        }
-        if (codepoint >= 0x20 && codepoint <= 0x7E) {
-            drawAsciiGlyph(codepoint, tft->getCursorX(), tft->getCursorY(), textSize);
-            continue;
+        if (!ascii.isEmpty()) {
+            tft->print(ascii);
+            ascii = "";
         }
         const UiBitmapGlyph *glyph = findBitmapGlyph(codepoint);
         if (glyph) drawBitmapGlyph(*glyph, tft->getCursorX(), tft->getCursorY(), textSize);
         else drawMissingGlyph(codepoint, tft->getCursorX(), tft->getCursorY(), textSize);
     }
+    if (!ascii.isEmpty()) tft->print(ascii);
 }
 #endif
 

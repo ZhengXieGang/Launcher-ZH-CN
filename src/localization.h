@@ -5,14 +5,6 @@
 #include <cstdint>
 #include <vector>
 
-// The language code is deliberately kept independent from the display driver and
-// the WebUI.  A language package can therefore be added without changing the
-// launcher state machine or any protocol/API names.
-enum class UiLanguage : uint8_t {
-    ChineseSimplified = 0,
-    English = 1,
-};
-
 enum class UiTextKey : uint16_t {
     Launcher = 0,
     NoOptions,
@@ -54,9 +46,6 @@ enum class UiTextKey : uint16_t {
     ResetConfigsWifi,
     Restart,
     TurnOff,
-    Language,
-    SimplifiedChinese,
-    EnglishLanguage,
     Saving,
     Default,
     Red,
@@ -114,16 +103,6 @@ enum class UiTextKey : uint16_t {
     Count,
 };
 
-UiLanguage uiLanguage();
-const char *uiLanguageCode();
-const char *uiLanguageName(UiLanguage language);
-bool uiIsSupportedLanguage(const String &code);
-UiLanguage uiLanguageFromCode(const String &code);
-bool uiSetLanguage(UiLanguage language, bool persist = true);
-bool uiSetLanguageCode(const String &code, bool persist = true);
-bool uiLoadLanguageFromNVS();
-bool uiSaveLanguageToNVS();
-
 String uiText(UiTextKey key);
 String uiTranslate(const String &source);
 // Translate human-readable console lines while keeping command/protocol
@@ -141,19 +120,18 @@ int uiTextLineHeight(const String &text, uint8_t textSize = 1);
 String uiClipText(const String &text, int maxWidth, uint8_t textSize = 1);
 std::vector<String> uiWrapText(const String &text, int maxWidth, uint8_t textSize = 1);
 
-// Display-independent text drawing entry points. Printable ASCII uses a compact
-// half-width 6x12 bitmap and Simplified Chinese uses a 12x12 bitmap with the same
-// visual height and baseline. Unknown code points render as a stable replacement
-// glyph rather than corrupting UTF-8 output.
+// Display-independent text drawing entry points. ASCII keeps the display
+// driver's original 5x7 glyphs in 6x8 cells; Simplified Chinese uses seven
+// visible rows in a compact 8x8 full-width cell with the same top edge and line
+// height. Unknown code points render as a stable replacement glyph rather than
+// corrupting UTF-8 output.
 void uiDrawText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawCentreText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawRightText(const String &text, int x, int y, uint8_t textSize = 1);
 
 #if defined(LOCALIZATION_HOST_TEST)
-// Host-only hooks let the standalone regression test exercise NVS fallback and
-// alignment without an ESP32 or a display driver.
-void uiTestSetNvsLanguage(const String &code);
-void uiTestClearNvsLanguage();
+// Host-only hooks let the standalone regression test exercise alignment without
+// an ESP32 or a display driver.
 int uiTestLastDrawX();
 String uiTestLastDrawText();
 #endif

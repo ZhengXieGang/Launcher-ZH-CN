@@ -453,7 +453,6 @@ void settings_menu() {
                                askSpiffs = !askSpiffs;
                                settingsMenuDirty = true;
                            }});
-        options.push_back({uiText(UiTextKey::Language), [=]() { setLanguageMenu(); }});
         options.push_back({uiText(UiTextKey::PartitionManager), [=]() { partList(); }});
 #if defined(HAS_KEYBOARD)
         options.push_back({uiText(UiTextKey::ManageShortcuts), [=]() { manageKeyBindings(); }});
@@ -498,18 +497,6 @@ void settings_menu() {
     saveSettingsMenuIfNeeded();
     tft->drawPixel(0, 0, 0);
     tft->fillScreen(BGCOLOR);
-}
-
-void setLanguageMenu() {
-    options = {
-        {uiText(UiTextKey::SimplifiedChinese), []() { uiSetLanguage(UiLanguage::ChineseSimplified); }},
-        {uiText(UiTextKey::EnglishLanguage), []() { uiSetLanguage(UiLanguage::English); }},
-        {uiText(UiTextKey::Back), []() {}},
-    };
-    loopOptions(options);
-    // The current settings page is rebuilt by settings_menu(), immediately using
-    // the selected language. Persist the setting independently of config.conf.
-    uiSaveLanguageToNVS();
 }
 
 // This function comes from interface.h
@@ -722,7 +709,7 @@ String get_efuse_mac_as_string() {
 }
 
 bool saveIntoNVS() {
-    // Persist the scalar settings and language together with one commit.
+    // Persist scalar settings together with one commit.
     nvs_handle_t handle = 0;
     esp_err_t err = nvs_open("launcher", NVS_READWRITE, &handle);
     if (err != ESP_OK) {
@@ -759,7 +746,6 @@ bool saveIntoNVS() {
         {"wui_pwd", wui_pwd.c_str()},
         {"dwn_path", dwn_path.c_str()},
         {"last_app", lastInstalledApp.c_str()},
-        {"language", uiLanguageCode()},
     };
     for (const auto &item : strings) keepFirstNvsError(err, nvs_set_str(handle, item[0], item[1]));
     if (err != ESP_OK) {
@@ -873,7 +859,6 @@ void defaultValues() {
     wui_usr = "admin";
     wui_pwd = "launcher";
     dwn_path = "/downloads/";
-    uiSetLanguage(UiLanguage::ChineseSimplified, false);
 #if defined(HEADLESS)
     // SD Pins
     _miso = 0;
@@ -940,18 +925,6 @@ bool getFromNVS() {
     if (lastAppErr == ESP_OK) lastInstalledApp = String(appBuffer);
     else if (lastAppErr == ESP_ERR_NVS_NOT_FOUND) lastInstalledApp = "";
     else keepFirstNvsError(err, lastAppErr);
-    char languageBuffer[16] = {0};
-    size_t languageBufferSize = sizeof(languageBuffer);
-    esp_err_t languageErr = nvs_get_str(handle, "language", languageBuffer, &languageBufferSize);
-    if (languageErr == ESP_OK) {
-        // Invalid values deliberately fall back to zh-CN.  Persisting the fallback
-        // happens on the next normal settings save, avoiding a second NVS handle here.
-        uiSetLanguageCode(String(languageBuffer), false);
-    } else if (languageErr == ESP_ERR_NVS_NOT_FOUND) {
-        uiSetLanguage(UiLanguage::ChineseSimplified, false);
-    } else {
-        keepFirstNvsError(err, languageErr);
-    }
     nvs_close(handle);
     // ESP_ERR_NVS_NOT_FOUND is expected after a firmware update adds new settings keys
     // that haven't been written yet. Keep values at their defaults instead of wiping everything.

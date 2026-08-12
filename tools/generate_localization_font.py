@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the firmware's compact UTF-8 bitmap glyph tables.
+"""Generate the firmware's compact Simplified Chinese bitmap glyph table.
 
 The launcher only needs the non-ASCII characters present in firmware source
-strings.  Rendering a 12x12 subset keeps flash usage small while retaining a
-real glyph for every shipped Simplified Chinese translation and its punctuation.
-Printable ASCII also gets a narrow 6x12 companion font so mixed Chinese/English
-text can share one visual size and baseline on every display driver.
+strings. Rendering each glyph into the same seven visible rows as the native
+5x7 ASCII font keeps mixed text aligned inside the existing 8-pixel line height.
 """
 
 from __future__ import annotations
@@ -16,14 +14,12 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 
-CELL_HEIGHT = 12
-WIDE_CELL_WIDTH = 12
-WIDE_INNER_SIZE = 11
+CELL_HEIGHT = 8
+WIDE_CELL_WIDTH = 8
+WIDE_INNER_WIDTH = 8
+WIDE_INNER_HEIGHT = 7
 ASCII_CELL_WIDTH = 6
-ASCII_GLYPH_WIDTH = 5
-ASCII_BASELINE = 10
 WIDE_BITMAP_BYTES = (WIDE_CELL_WIDTH * CELL_HEIGHT + 7) // 8
-ASCII_BITMAP_BYTES = (ASCII_CELL_WIDTH * CELL_HEIGHT + 7) // 8
 
 
 def source_codepoints(root: Path) -> list[int]:
@@ -61,40 +57,14 @@ def rasterize_wide(font: ImageFont.FreeTypeFont, codepoint: int) -> bytes:
         return bytes(WIDE_BITMAP_BYTES)
 
     glyph = canvas.crop(bounds)
-    scale = min(WIDE_INNER_SIZE / glyph.width, WIDE_INNER_SIZE / glyph.height)
+    scale = min(WIDE_INNER_WIDTH / glyph.width, WIDE_INNER_HEIGHT / glyph.height)
     size = (max(1, round(glyph.width * scale)), max(1, round(glyph.height * scale)))
     glyph = glyph.resize(size, Image.Resampling.LANCZOS)
 
     cell = Image.new("L", (WIDE_CELL_WIDTH, CELL_HEIGHT), 0)
-    cell.paste(glyph, ((WIDE_CELL_WIDTH - size[0]) // 2, (CELL_HEIGHT - size[1]) // 2))
-    return pack_bitmap(cell)
-
-
-def rasterize_ascii(font: ImageFont.FreeTypeFont, codepoint: int) -> bytes:
-    if codepoint == 0x20:
-        return bytes(ASCII_BITMAP_BYTES)
-
-    char = chr(codepoint)
-    bounds = font.getbbox(char, anchor="ls")
-    if bounds is None:
-        return bytes(ASCII_BITMAP_BYTES)
-
-    left, top, right, bottom = bounds
-    source_width = max(1, right - left)
-    source_height = max(1, bottom - top)
-    source = Image.new("L", (source_width, source_height), 0)
-    ImageDraw.Draw(source).text((-left, -top), char, font=font, fill=255, anchor="ls")
-
-    # Preserve vertical proportions and the font baseline, compressing only the
-    # width into a five-pixel half-width cell. Capitals occupy nine rows while
-    # descenders use the final three, matching the 12x12 CJK cell without making
-    # punctuation such as '-' or ':' unnaturally tall.
-    target_top = ASCII_BASELINE + top
-    target_height = min(source_height, CELL_HEIGHT - target_top)
-    glyph = source.resize((ASCII_GLYPH_WIDTH, target_height), Image.Resampling.LANCZOS)
-
-    cell = Image.new("L", (ASCII_CELL_WIDTH, CELL_HEIGHT), 0)
-    cell.paste(glyph, (0, target_top))
+    # Native 5x7 ASCII starts at the cursor's top edge and leaves the eighth
+    # scanline empty. Use the same top edge and visible height for Chinese.
+    cell.paste(glyph, ((WIDE_CELL_WIDTH - size[0]) // 2, 0))
     return pack_bitmap(cell)
 
 
@@ -102,9 +72,7 @@ def write_header(
     path: Path,
     codepoints: list[int],
     wide_glyphs: list[bytes],
-    ascii_glyphs: list[bytes],
     font_path: Path,
-    ascii_font_path: Path,
 ) -> None:
     lines = [
         "#ifndef LAUNCHER_LOCALIZATION_FONT_H",
@@ -113,28 +81,16 @@ def write_header(
         "#include <cstddef>",
         "#include <cstdint>",
         "",
-        "// Generated from Noto Sans CJK SC Regular and Noto Sans Mono Regular.",
+        "// Generated from Noto Sans CJK SC Regular.",
         "// Noto fonts are copyright Google and licensed under SIL OFL 1.1.",
-        "// Printable ASCII is 6x12; only non-ASCII codepoints used by firmware strings are included.",
+        "// ASCII uses the display driver's native 5x7 glyphs in 6x8 cells.",
+        "// Chinese uses seven visible rows in 8x8 cells to keep the same height and top edge.",
         f"static constexpr uint8_t kUiFontCellHeight = {CELL_HEIGHT};",
         f"static constexpr uint8_t kUiAsciiGlyphWidth = {ASCII_CELL_WIDTH};",
         f"static constexpr uint8_t kUiWideGlyphWidth = {WIDE_CELL_WIDTH};",
-        f"static constexpr uint8_t kUiFontBaseline = {ASCII_BASELINE};",
-        "",
-        "struct UiAsciiGlyph {",
-        f"    uint8_t bitmap[{ASCII_BITMAP_BYTES}]; // {ASCII_CELL_WIDTH}x{CELL_HEIGHT}, MSB first",
-        "};",
-        "",
-        f"static constexpr UiAsciiGlyph kUiAsciiGlyphs[{len(ascii_glyphs)}] = {{",
     ]
-    for bitmap in ascii_glyphs:
-        bytes_text = ", ".join(f"0x{value:02X}" for value in bitmap)
-        lines.append(f"    {{{{{bytes_text}}}}},")
     lines.extend(
         [
-            "};",
-            "",
-            f"static constexpr size_t kUiAsciiGlyphCount = {len(ascii_glyphs)};",
             "",
             "struct UiBitmapGlyph {",
             "    uint16_t codepoint;",
@@ -158,10 +114,7 @@ def write_header(
         ]
     )
     path.write_text("\n".join(lines), encoding="utf-8")
-    print(
-        f"generated {len(ascii_glyphs)} ASCII and {len(codepoints)} wide glyphs "
-        f"({path.stat().st_size} bytes) from {ascii_font_path} and {font_path}"
-    )
+    print(f"generated {len(codepoints)} 8x8 glyphs ({path.stat().st_size} bytes) from {font_path}")
 
 
 def main() -> None:
@@ -174,11 +127,6 @@ def main() -> None:
     )
     parser.add_argument("--font-index", type=int, default=2, help="Noto Sans CJK SC face index")
     parser.add_argument(
-        "--ascii-font",
-        type=Path,
-        default=Path("/usr/share/fonts/noto/NotoSansMono-Regular.ttf"),
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         default=None,
@@ -189,10 +137,8 @@ def main() -> None:
     output = args.output or root / "src" / "localization_font.h"
     codepoints = source_codepoints(root)
     font = ImageFont.truetype(str(args.font), 64, index=args.font_index)
-    ascii_font = ImageFont.truetype(str(args.ascii_font), 12)
     wide_glyphs = [rasterize_wide(font, codepoint) for codepoint in codepoints]
-    ascii_glyphs = [rasterize_ascii(ascii_font, codepoint) for codepoint in range(0x20, 0x7F)]
-    write_header(output, codepoints, wide_glyphs, ascii_glyphs, args.font, args.ascii_font)
+    write_header(output, codepoints, wide_glyphs, args.font)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,11 @@
 # Launcher
 适用于 M5Stack、Lilygo、CYD、Marauder 及其他 ESP32 设备的应用启动器。
 
-首版界面支持简体中文（默认）和 English。设备与 WebUI 共用 NVS 中的
-`launcher/language` 设置；首次启动、缺少设置或设置无效时自动使用 `zh-CN`。
-无屏设备通过串口交互时，控制台返回的说明文字默认使用简体中文；可输入
-`language en` 切换英文。命令关键字、`OK`/`ERR`/`READY`/`ACK` 状态前缀及协议字段保持英文，
+固件界面和 WebUI 固定使用简体中文，不保留运行时语言切换，以节省 Flash。
+无屏设备通过串口交互时，控制台返回的说明文字使用简体中文。命令关键字、
+`OK`/`ERR`/`READY`/`ACK` 状态前缀及协议字段保持英文，
 以保证脚本和旧版命令兼容。有屏设备的历史调试日志仍保持英文。
-有屏设备内置覆盖固件界面文案的 12x12 简体中文位图字库；未收录的外部动态字符会显示替代符号。
+有屏设备内置与原生英文字体同高的 8x8 简体中文位图字库；未收录的外部动态字符会显示替代符号。
 
 
 <p align="center" width="100%">
@@ -110,7 +109,7 @@ Join our [Discord community](https://discord.gg/BE9by2a2FF)
      * [x] **键盘设备快捷键系统**：可将二进制文件绑定到按键，从主菜单一键安装。
      * [x] **键盘和触摸设备快速启动**：启动画面按键或触摸即可快速进入已安装固件。
      * [x] **新增串口接口**：在串口输入 "help" 查看命令；可配置 Wifi、校准触摸屏、镜像 X/Y 轴或交换 XY 轴。例如："wifi add MyNetworkSSID MyN37w0rkPWD"。
-     * [x] **无屏串口中文交互**：输入 `language` 查看当前语言，输入 `language zh-CN` 或 `language en` 可立即切换并保存到 NVS；命令关键字和协议状态前缀保持英文。
+     * [x] **无屏串口中文交互**：人类可读的返回内容固定使用简体中文；命令关键字和协议状态前缀保持英文。
      * [x] **已下载固件更新列表**：Launcher 会读取 `{dwn_path}/downloaded.json`，检查下载固件的新版本，并可通过 `[Update All]` 将新文件下载到 SDCard。
      * [x] **多段二进制下载**：LauncherHub 上的 `bootloader.bin`、`partitions.bin`、`firmware.bin` 和 `data.bin` 会在运行时合并为一个可从 SDCard 刷写的文件。
      * [x] **新的数据分区备份系统**：在 `/bkp/backupData.json` 保存备份与二进制文件的关系，重新安装时自动恢复；应用图标和 PMan 会显示备份状态。此功能需要 SD Card。

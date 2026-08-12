@@ -1,11 +1,6 @@
 {
   "launcher": [
     {
-      "k": "language",
-      "t": "str",
-      "v": "zh-CN"
-    },
-    {
       "k": "brightness",
       "t": "u8",
       "v": 128

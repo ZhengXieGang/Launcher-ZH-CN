@@ -1,7 +1,6 @@
 # Launcher WebUI 开发服务器
 
-这是一个 Node.js 开发后端，用于在没有 ESP32 硬件时测试 WebUI。设备与开发服务器
-共享 `launcher/language` 语言设置，默认值为 `zh-CN`，也支持 `en`。
+这是一个 Node.js 开发后端，用于在没有 ESP32 硬件时测试中文版 WebUI。
 
 ## 要求
 
@@ -41,7 +40,6 @@ PORT=3000 WUI_USR=admin WUI_PWD=minhasenha node server.js C:\pasta
 
 | 端点 | 方法 | 行为 |
 |---|---|---|
-| `/language` | GET/POST | 读取或更新 `zh-CN`/`en` 语言设置（POST 需要登录） |
 | `/ping` | GET | 返回 `launcher-pong` |
 | `/login` | POST | 验证凭据并创建会话 Cookie |
 | `/logout` | GET | 结束会话并重定向 |
@@ -82,8 +80,7 @@ PORT=3000 WUI_USR=admin WUI_PWD=minhasenha node server.js C:\pasta
 
 ## NVS
 
-语言值保存在 `launcher/language`。缺失或非法值会回退到 `zh-CN`；`launcher/token`
-不会暴露，也不允许编辑，与固件行为一致。其余示例数据保存在同目录的
+`launcher/token` 不会暴露，也不允许编辑，与固件行为一致。其余示例数据保存在同目录的
 `nvs_mock.json`，会跨服务器重启保留。
 
 ## 模拟分区管理（PMan）
