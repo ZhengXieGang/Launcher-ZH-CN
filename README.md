@@ -17,10 +17,9 @@
 Join our [Discord community](https://discord.gg/BE9by2a2FF)
 
 ## 安装
-* 使用 [Launcher Flasher](https://bmorcelli.github.io/Launcher/)。
-* 使用 M5Burner。
-* 从 Releases 下载对应设备的 `.bin`，使用 https://web.esphome.io/ 或 esptool.py
-  将 `Launcher-{YourDevice}.bin` 写入设备。
+* 从本仓库的 [Releases](https://github.com/ZhengXieGang/Launcher-ZH-CN/releases) 下载中文固件。
+* 使用 https://web.esphome.io/ 或 `esptool` 将 `.bin` 从地址 `0x0` 写入设备。
+* 没有预编译固件的设备可使用对应的 PlatformIO 环境自行构建。
 
 ## 使用方法
 * 打开设备。
@@ -95,9 +94,6 @@ Join our [Discord community](https://discord.gg/BE9by2a2FF)
 后续版本计划：
 
 * [ ] LVGL UI (?)
-* [ ] 迁移到 ESP-IDF Platform
-* [ ] 优化设置功能以节省 Flash
-* [ ] 优化存储功能以节省 Flash
 
 ## 最新更新日志
 * 2.8.1:

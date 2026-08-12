@@ -106,7 +106,9 @@ void displayScrollingText(const String &text, Opt_Coord &coord) {
     if (!displayText.startsWith(translated)) i = 0;
     displayText = translated + "        "; // Add spaces for smooth looping
     tft->setTextColor(coord.fgcolor, coord.bgcolor);
-    const int maxWidth = (coord.size > 0 ? coord.size - 1 : 1) * LW * tft->getTextsize();
+    const int fallbackWidth =
+        (coord.size > 0 ? coord.size - 1 : 1) * LW * tft->getTextsize();
+    const int maxWidth = coord.width == 0 ? fallbackWidth : coord.width;
     const int lineHeight = uiTextLineHeight(translated, tft->getTextsize());
     if (uiTextWidth(translated, tft->getTextsize()) <= maxWidth) {
         // Text fits within limit, no scrolling needed
@@ -115,9 +117,8 @@ void displayScrollingText(const String &text, Opt_Coord &coord) {
         if (i < 0 || i >= displayText.length()) i = 0;
         const bool firstFrame = i == 0;
         String scrollingPart = uiClipText(displayText.substring(i), maxWidth, tft->getTextsize());
-        tft->fillRect(
-            coord.x, coord.y, maxWidth, lineHeight, BGCOLOR
-        ); // Clear display area
+        // Clear the full label area, including pixels beyond the last complete character cell.
+        tft->fillRect(coord.x, coord.y, maxWidth, lineHeight, coord.bgcolor);
         uiDrawText(scrollingPart, coord.x, coord.y, tft->getTextsize());
         // Advance by one decoded code point, never into the middle of a UTF-8
         // sequence.  The trailing spaces are part of the loop buffer.
@@ -778,6 +779,7 @@ Opt_Coord drawOptions(
             coord.x = labelX;
             coord.y = rowTop;
             coord.size = labelCharLimit;
+            coord.width = static_cast<uint16_t>(labelWidth);
             coord.fgcolor = color;
             coord.bgcolor = bgcolor;
         }
