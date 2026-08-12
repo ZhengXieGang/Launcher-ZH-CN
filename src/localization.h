@@ -121,10 +121,10 @@ String uiClipText(const String &text, int maxWidth, uint8_t textSize = 1);
 std::vector<String> uiWrapText(const String &text, int maxWidth, uint8_t textSize = 1);
 
 // Display-independent text drawing entry points. ASCII keeps the display
-// driver's original 5x7 glyphs in 6x8 cells; Simplified Chinese uses seven
-// visible rows in a compact 8x8 full-width cell with the same top edge and line
-// height. Unknown code points render as a stable replacement glyph rather than
-// corrupting UTF-8 output.
+// driver's original 5x7 glyphs in 6x8 cells; Simplified Chinese uses Fusion
+// Pixel Font's crisp pixel strokes in a compact 8x8 full-width cell, with seven
+// visible rows sharing the same top edge and line height. Unknown code points
+// render as a stable replacement glyph rather than corrupting UTF-8 output.
 void uiDrawText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawCentreText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawRightText(const String &text, int x, int y, uint8_t textSize = 1);

@@ -1,79 +1,125 @@
 #!/usr/bin/env python3
 """Generate the firmware's compact Simplified Chinese bitmap glyph table.
 
-The launcher only needs the non-ASCII characters present in firmware source
-strings. Rendering each glyph into the same seven visible rows as the native
-5x7 ASCII font keeps mixed text aligned inside the existing 8-pixel line height.
+The launcher embeds only the non-ASCII characters used by its localization
+catalog. Glyphs come directly from Fusion Pixel Font's native 8px zh_hans BDF,
+so no antialiasing or resampling can blur the one-pixel strokes.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 from pathlib import Path
-
-from PIL import Image, ImageDraw, ImageFont
+import urllib.request
+import zipfile
 
 
 CELL_HEIGHT = 8
 WIDE_CELL_WIDTH = 8
-WIDE_INNER_WIDTH = 8
-WIDE_INNER_HEIGHT = 7
 ASCII_CELL_WIDTH = 6
 WIDE_BITMAP_BYTES = (WIDE_CELL_WIDTH * CELL_HEIGHT + 7) // 8
+
+FUSION_PIXEL_VERSION = "2026.08.11"
+FUSION_PIXEL_ARCHIVE = f"fusion-pixel-font-8px-monospaced-bdf-v{FUSION_PIXEL_VERSION}.zip"
+FUSION_PIXEL_URL = (
+    "https://github.com/TakWolf/fusion-pixel-font/releases/download/"
+    f"{FUSION_PIXEL_VERSION}/{FUSION_PIXEL_ARCHIVE}"
+)
+FUSION_PIXEL_SHA256 = "8e2147c08c76f99d1e670bf6ad30b35787a1fb6a8e69626a73c8f4705249a69e"
+FUSION_PIXEL_BDF = "fusion-pixel-8px-monospaced-zh_hans.bdf"
 
 
 def source_codepoints(root: Path) -> list[int]:
     # The localization catalog is the only firmware source of non-ASCII text
-    # that is intentionally drawn.  Scanning every comment and board note would
-    # silently add Japanese/Portuguese punctuation to every board's binary.
-    codepoints: set[int] = set()
+    # that is intentionally drawn. Scanning comments and board notes would add
+    # unrelated glyphs to every board's binary.
     path = root / "src" / "localization.cpp"
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return []
-    codepoints.update(ord(char) for char in text if 0x80 <= ord(char) <= 0xFFFF)
-    return sorted(codepoints)
+    return sorted({ord(char) for char in text if 0x80 <= ord(char) <= 0xFFFF})
 
 
-def pack_bitmap(image: Image.Image) -> bytes:
-    width, height = image.size
-    bitmap = bytearray((width * height + 7) // 8)
-    for row in range(height):
-        for column in range(width):
-            if image.getpixel((column, row)) < 110:
-                continue
-            bit = row * width + column
-            bitmap[bit // 8] |= 1 << (7 - (bit % 8))
-    return bytes(bitmap)
+def load_font_archive(path: Path | None) -> bytes:
+    if path is not None:
+        archive = path.read_bytes()
+    else:
+        print(f"downloading {FUSION_PIXEL_URL}")
+        with urllib.request.urlopen(FUSION_PIXEL_URL, timeout=60) as response:
+            archive = response.read()
+
+    digest = hashlib.sha256(archive).hexdigest()
+    if digest != FUSION_PIXEL_SHA256:
+        raise ValueError(
+            f"Fusion Pixel Font archive SHA-256 mismatch: expected {FUSION_PIXEL_SHA256}, got {digest}"
+        )
+    return archive
 
 
-def rasterize_wide(font: ImageFont.FreeTypeFont, codepoint: int) -> bytes:
-    char = chr(codepoint)
-    canvas = Image.new("L", (96, 96), 0)
-    ImageDraw.Draw(canvas).text((8, 0), char, font=font, fill=255)
-    bounds = canvas.getbbox()
-    if bounds is None:
-        return bytes(WIDE_BITMAP_BYTES)
-
-    glyph = canvas.crop(bounds)
-    scale = min(WIDE_INNER_WIDTH / glyph.width, WIDE_INNER_HEIGHT / glyph.height)
-    size = (max(1, round(glyph.width * scale)), max(1, round(glyph.height * scale)))
-    glyph = glyph.resize(size, Image.Resampling.LANCZOS)
-
-    cell = Image.new("L", (WIDE_CELL_WIDTH, CELL_HEIGHT), 0)
-    # Native 5x7 ASCII starts at the cursor's top edge and leaves the eighth
-    # scanline empty. Use the same top edge and visible height for Chinese.
-    cell.paste(glyph, ((WIDE_CELL_WIDTH - size[0]) // 2, 0))
-    return pack_bitmap(cell)
+def load_bdf(archive: bytes) -> str:
+    with zipfile.ZipFile(io.BytesIO(archive)) as package:
+        try:
+            return package.read(FUSION_PIXEL_BDF).decode("ascii")
+        except KeyError as error:
+            raise ValueError(f"{FUSION_PIXEL_BDF} is missing from the font archive") from error
 
 
-def write_header(
-    path: Path,
-    codepoints: list[int],
-    wide_glyphs: list[bytes],
-    font_path: Path,
-) -> None:
+def parse_bdf_glyphs(bdf: str, required_codepoints: set[int]) -> dict[int, bytes]:
+    glyphs: dict[int, bytes] = {}
+    encoding: int | None = None
+    dwidth: tuple[int, int] | None = None
+    bounds: tuple[int, int, int, int] | None = None
+    bitmap: list[int] = []
+    reading_bitmap = False
+
+    for raw_line in bdf.splitlines():
+        fields = raw_line.split()
+        if not fields:
+            continue
+        keyword = fields[0]
+        if keyword == "STARTCHAR":
+            encoding = None
+            dwidth = None
+            bounds = None
+            bitmap = []
+            reading_bitmap = False
+        elif keyword == "ENCODING":
+            encoding = int(fields[1])
+        elif keyword == "DWIDTH":
+            dwidth = (int(fields[1]), int(fields[2]))
+        elif keyword == "BBX":
+            bounds = tuple(map(int, fields[1:5]))
+        elif keyword == "BITMAP":
+            reading_bitmap = True
+        elif keyword == "ENDCHAR":
+            if encoding is not None and encoding in required_codepoints:
+                if dwidth != (WIDE_CELL_WIDTH, 0) or bounds != (WIDE_CELL_WIDTH, CELL_HEIGHT, 0, -1):
+                    raise ValueError(
+                        f"U+{encoding:04X} has incompatible Fusion Pixel Font metrics: "
+                        f"DWIDTH={dwidth}, BBX={bounds}"
+                    )
+                if len(bitmap) != CELL_HEIGHT:
+                    raise ValueError(f"U+{encoding:04X} has {len(bitmap)} rows, expected {CELL_HEIGHT}")
+                # Fusion's 8px BDF reserves its first row and draws through the
+                # eighth. Shift up one row to match the native ASCII top edge and
+                # preserve the launcher's existing seven-visible-row contract.
+                glyphs[encoding] = bytes(bitmap[1:] + [0])
+            reading_bitmap = False
+        elif reading_bitmap:
+            bitmap.append(int(raw_line, 16))
+
+    return glyphs
+
+
+def write_header(path: Path, codepoints: list[int], glyphs: dict[int, bytes]) -> None:
+    missing = [codepoint for codepoint in codepoints if codepoint not in glyphs]
+    if missing:
+        values = ", ".join(f"U+{codepoint:04X}" for codepoint in missing)
+        raise ValueError(f"Fusion Pixel Font is missing required glyphs: {values}")
+
     lines = [
         "#ifndef LAUNCHER_LOCALIZATION_FONT_H",
         "#define LAUNCHER_LOCALIZATION_FONT_H",
@@ -81,27 +127,23 @@ def write_header(
         "#include <cstddef>",
         "#include <cstdint>",
         "",
-        "// Generated from Noto Sans CJK SC Regular.",
-        "// Noto fonts are copyright Google and licensed under SIL OFL 1.1.",
+        f"// Generated from Fusion Pixel Font {FUSION_PIXEL_VERSION}, 8px monospaced zh_hans.",
+        "// Copyright (c) 2022 TakWolf. Licensed under SIL OFL 1.1.",
         "// ASCII uses the display driver's native 5x7 glyphs in 6x8 cells.",
         "// Chinese uses seven visible rows in 8x8 cells to keep the same height and top edge.",
         f"static constexpr uint8_t kUiFontCellHeight = {CELL_HEIGHT};",
         f"static constexpr uint8_t kUiAsciiGlyphWidth = {ASCII_CELL_WIDTH};",
         f"static constexpr uint8_t kUiWideGlyphWidth = {WIDE_CELL_WIDTH};",
+        "",
+        "struct UiBitmapGlyph {",
+        "    uint16_t codepoint;",
+        f"    uint8_t bitmap[{WIDE_BITMAP_BYTES}]; // {WIDE_CELL_WIDTH}x{CELL_HEIGHT}, MSB first",
+        "};",
+        "",
+        f"static constexpr UiBitmapGlyph kUiBitmapGlyphs[{len(codepoints)}] = {{",
     ]
-    lines.extend(
-        [
-            "",
-            "struct UiBitmapGlyph {",
-            "    uint16_t codepoint;",
-            f"    uint8_t bitmap[{WIDE_BITMAP_BYTES}]; // {WIDE_CELL_WIDTH}x{CELL_HEIGHT}, MSB first",
-            "};",
-            "",
-            f"static constexpr UiBitmapGlyph kUiBitmapGlyphs[{len(codepoints)}] = {{",
-        ]
-    )
-    for codepoint, bitmap in zip(codepoints, wide_glyphs):
-        bytes_text = ", ".join(f"0x{value:02X}" for value in bitmap)
+    for codepoint in codepoints:
+        bytes_text = ", ".join(f"0x{value:02X}" for value in glyphs[codepoint])
         lines.append(f"    {{0x{codepoint:04X}, {{{bytes_text}}}}},")
     lines.extend(
         [
@@ -114,18 +156,21 @@ def write_header(
         ]
     )
     path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"generated {len(codepoints)} 8x8 glyphs ({path.stat().st_size} bytes) from {font_path}")
+    print(
+        f"generated {len(codepoints)} Fusion Pixel Font 8x8 glyphs "
+        f"({path.stat().st_size} bytes)"
+    )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument(
-        "--font",
+        "--font-archive",
         type=Path,
-        default=Path("/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc"),
+        default=None,
+        help="local Fusion Pixel Font release archive; otherwise download the pinned release",
     )
-    parser.add_argument("--font-index", type=int, default=2, help="Noto Sans CJK SC face index")
     parser.add_argument(
         "--output",
         type=Path,
@@ -136,9 +181,9 @@ def main() -> None:
     root = args.root.resolve()
     output = args.output or root / "src" / "localization_font.h"
     codepoints = source_codepoints(root)
-    font = ImageFont.truetype(str(args.font), 64, index=args.font_index)
-    wide_glyphs = [rasterize_wide(font, codepoint) for codepoint in codepoints]
-    write_header(output, codepoints, wide_glyphs, args.font)
+    archive = load_font_archive(args.font_archive)
+    glyphs = parse_bdf_glyphs(load_bdf(archive), set(codepoints))
+    write_header(output, codepoints, glyphs)
 
 
 if __name__ == "__main__":

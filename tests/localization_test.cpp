@@ -88,6 +88,17 @@ void testBitmapFontContract() {
     expect(hasGlyph(0x542F), "Chinese glyph for U+542F must be present");
     expect(hasGlyph(0x7F6E), "Chinese glyph for U+7F6E must be present");
     expect(hasGlyph(0xFF1A), "full-width Chinese punctuation must be present");
+    auto glyphRows = [](uint16_t codepoint) -> const uint8_t * {
+        for (size_t i = 0; i < kUiBitmapGlyphCount; ++i) {
+            if (kUiBitmapGlyphs[i].codepoint == codepoint) return kUiBitmapGlyphs[i].bitmap;
+        }
+        return nullptr;
+    };
+    const uint8_t *middle = glyphRows(0x4E2D);
+    expect(
+        middle && middle[0] == 0x10 && middle[1] == 0xFE && middle[4] == 0xFE && middle[6] == 0x10,
+        "Chinese glyphs must come from the pinned Fusion Pixel Font bitmap"
+    );
     expect(uiTextLineHeight(u8"中文", 1) == 8, "Chinese lines must match native ASCII height");
     expect(uiTextLineHeight("English", 1) == 8, "ASCII lines must keep native height");
     expect(uiTextLineHeight(u8"English中文", 2) == 16, "mixed text must keep native scaled line height");
