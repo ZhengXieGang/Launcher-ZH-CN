@@ -141,10 +141,10 @@ int uiTextLineHeight(const String &text, uint8_t textSize = 1);
 String uiClipText(const String &text, int maxWidth, uint8_t textSize = 1);
 std::vector<String> uiWrapText(const String &text, int maxWidth, uint8_t textSize = 1);
 
-// Display-independent text drawing entry points. ASCII uses the active native
-// font; the shipped Simplified Chinese strings use a compact 12x12 bitmap subset
-// that works consistently with every display driver. Unknown code points render
-// as a stable replacement glyph rather than corrupting UTF-8 output.
+// Display-independent text drawing entry points. Printable ASCII uses a compact
+// half-width 6x12 bitmap and Simplified Chinese uses a 12x12 bitmap with the same
+// visual height and baseline. Unknown code points render as a stable replacement
+// glyph rather than corrupting UTF-8 output.
 void uiDrawText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawCentreText(const String &text, int x, int y, uint8_t textSize = 1);
 void uiDrawRightText(const String &text, int x, int y, uint8_t textSize = 1);

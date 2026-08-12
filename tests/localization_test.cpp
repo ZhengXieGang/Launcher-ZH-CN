@@ -99,6 +99,20 @@ void testUtf8MetricsClippingWrappingAndAlignment() {
 }
 
 void testBitmapFontContract() {
+    expect(kUiFontCellHeight == 12, "the unified UI font cell must be 12 pixels tall");
+    expect(kUiAsciiGlyphWidth == 6, "ASCII must keep the existing half-width advance");
+    expect(kUiWideGlyphWidth == 12, "CJK must keep the existing full-width advance");
+    expect(kUiFontBaseline == 10, "ASCII baseline must align visually with CJK glyphs");
+    expect(kUiAsciiGlyphCount == 95, "all printable ASCII glyphs must be present");
+    auto hasAsciiPixels = [](char value) {
+        const UiAsciiGlyph &glyph = kUiAsciiGlyphs[static_cast<unsigned char>(value) - 0x20U];
+        for (uint8_t byte : glyph.bitmap) {
+            if (byte != 0) return true;
+        }
+        return false;
+    };
+    expect(hasAsciiPixels('A'), "ASCII capital glyph must be present");
+    expect(hasAsciiPixels('g'), "ASCII descender glyph must be present");
     expect(kUiBitmapGlyphCount >= 300, "firmware bitmap font must cover the shipped UI subset");
     auto hasGlyph = [](uint16_t codepoint) {
         for (size_t i = 0; i < kUiBitmapGlyphCount; ++i) {
@@ -116,7 +130,8 @@ void testBitmapFontContract() {
     expect(hasGlyph(0x8BED), "Chinese glyph for U+8BED must be present");
     expect(hasGlyph(0xFF1A), "full-width Chinese punctuation must be present");
     expect(uiTextLineHeight(u8"中文", 1) == 12, "Chinese lines must reserve bitmap glyph height");
-    expect(uiTextLineHeight("English", 1) == 8, "ASCII lines must keep native line height");
+    expect(uiTextLineHeight("English", 1) == 12, "ASCII lines must share the CJK font height");
+    expect(uiTextLineHeight(u8"English中文", 2) == 24, "mixed text must share one scaled line height");
 }
 
 } // namespace

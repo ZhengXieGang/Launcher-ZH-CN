@@ -464,9 +464,9 @@ String replaceToken(String value, const char *token, const String &replacement) 
 }
 
 int glyphWidth(uint32_t codepoint, uint8_t textSize) {
-    if (codepoint == '\t') return 4 * 6 * textSize;
-    if (codepoint < 0x80) return 6 * textSize;
-    return 12 * textSize;
+    if (codepoint == '\t') return 4 * kUiAsciiGlyphWidth * textSize;
+    if (codepoint < 0x80) return kUiAsciiGlyphWidth * textSize;
+    return kUiWideGlyphWidth * textSize;
 }
 
 #if !defined(LOCALIZATION_HOST_TEST)
@@ -489,16 +489,17 @@ void drawMissingGlyph(uint32_t codepoint, int x, int y, uint8_t textSize) {
     // shipped UI strings are all in the real bitmap table above.
     (void)codepoint;
     const int cell = textSize ? textSize : 1;
-    const int width = 12 * cell;
+    const int width = kUiWideGlyphWidth * cell;
     const uint16_t color = tft->getTextcolor();
-    for (int row = 0; row < 12; ++row) {
+    for (int row = 0; row < kUiFontCellHeight; ++row) {
         int runStart = -1;
-        for (int col = 0; col <= 12; ++col) {
-            const bool edge = row == 0 || row == 11 || col == 0 || col == 11;
-            const bool diagonal = row == col || row + col == 11;
-            const bool on = col < 12 && (edge || (diagonal && row > 2 && row < 9));
+        for (int col = 0; col <= kUiWideGlyphWidth; ++col) {
+            const bool edge =
+                row == 0 || row == kUiFontCellHeight - 1 || col == 0 || col == kUiWideGlyphWidth - 1;
+            const bool diagonal = row == col || row + col == kUiWideGlyphWidth - 1;
+            const bool on = col < kUiWideGlyphWidth && (edge || (diagonal && row > 2 && row < 9));
             if (on && runStart < 0) runStart = col;
-            if ((!on || col == 12) && runStart >= 0) {
+            if ((!on || col == kUiWideGlyphWidth) && runStart >= 0) {
                 tft->fillRect(
                     x + runStart * cell,
                     y + row * cell,
@@ -513,16 +514,18 @@ void drawMissingGlyph(uint32_t codepoint, int x, int y, uint8_t textSize) {
     tft->setCursor(x + width, y);
 }
 
-void drawBitmapGlyph(const UiBitmapGlyph &glyph, int x, int y, uint8_t textSize) {
+void drawPackedGlyph(
+    const uint8_t *bitmap, int glyphWidth, int glyphHeight, int x, int y, uint8_t textSize
+) {
     const int cell = textSize ? textSize : 1;
     const uint16_t color = tft->getTextcolor();
-    for (int row = 0; row < 12; ++row) {
+    for (int row = 0; row < glyphHeight; ++row) {
         int runStart = -1;
-        for (int col = 0; col <= 12; ++col) {
-            const int bit = row * 12 + col;
-            const bool on = col < 12 && (glyph.bitmap[bit / 8] & (1U << (7 - (bit % 8)))) != 0;
+        for (int col = 0; col <= glyphWidth; ++col) {
+            const int bit = row * glyphWidth + col;
+            const bool on = col < glyphWidth && (bitmap[bit / 8] & (1U << (7 - (bit % 8)))) != 0;
             if (on && runStart < 0) runStart = col;
-            if ((!on || col == 12) && runStart >= 0) {
+            if ((!on || col == glyphWidth) && runStart >= 0) {
                 tft->fillRect(
                     x + runStart * cell,
                     y + row * cell,
@@ -534,7 +537,20 @@ void drawBitmapGlyph(const UiBitmapGlyph &glyph, int x, int y, uint8_t textSize)
             }
         }
     }
-    tft->setCursor(x + 12 * cell, y);
+    tft->setCursor(x + glyphWidth * cell, y);
+}
+
+void drawAsciiGlyph(uint32_t codepoint, int x, int y, uint8_t textSize) {
+    const size_t index = static_cast<size_t>(codepoint - 0x20U);
+    drawPackedGlyph(
+        kUiAsciiGlyphs[index].bitmap, kUiAsciiGlyphWidth, kUiFontCellHeight, x, y, textSize
+    );
+}
+
+void drawBitmapGlyph(const UiBitmapGlyph &glyph, int x, int y, uint8_t textSize) {
+    drawPackedGlyph(
+        glyph.bitmap, kUiWideGlyphWidth, kUiFontCellHeight, x, y, textSize
+    );
 }
 #endif
 
@@ -777,17 +793,9 @@ int uiTextWidth(const String &text, uint8_t textSize) {
 }
 
 int uiTextLineHeight(const String &text, uint8_t textSize) {
+    (void)text;
     if (textSize == 0) textSize = 1;
-    int height = 8 * textSize;
-    size_t offset = 0;
-    uint32_t codepoint = 0;
-    while (uiDecodeUtf8(text.c_str(), text.length(), offset, codepoint)) {
-        if (codepoint >= 0x80) {
-            height = std::max(height, 12 * static_cast<int>(textSize));
-            break;
-        }
-    }
-    return height;
+    return kUiFontCellHeight * textSize;
 }
 
 String uiClipText(const String &text, int maxWidth, uint8_t textSize) {
@@ -859,25 +867,28 @@ void uiDrawText(const String &text, int x, int y, uint8_t textSize) {
     if (textSize == 0) textSize = 1;
     tft->setTextSize(textSize);
     tft->setCursor(x, y);
-    String ascii;
     size_t offset = 0;
     while (offset < static_cast<size_t>(text.length())) {
-        const size_t start = offset;
         uint32_t codepoint = 0;
         if (!uiDecodeUtf8(text.c_str(), text.length(), offset, codepoint)) break;
-        if (codepoint < 0x80) {
-            ascii += text.substring(start, offset);
+
+        if (codepoint == '\n') {
+            tft->setCursor(x, tft->getCursorY() + kUiFontCellHeight * textSize);
             continue;
         }
-        if (!ascii.isEmpty()) {
-            tft->print(ascii);
-            ascii = "";
+        if (codepoint == '\r') continue;
+        if (codepoint == '\t') {
+            tft->setCursor(tft->getCursorX() + 4 * kUiAsciiGlyphWidth * textSize, tft->getCursorY());
+            continue;
+        }
+        if (codepoint >= 0x20 && codepoint <= 0x7E) {
+            drawAsciiGlyph(codepoint, tft->getCursorX(), tft->getCursorY(), textSize);
+            continue;
         }
         const UiBitmapGlyph *glyph = findBitmapGlyph(codepoint);
         if (glyph) drawBitmapGlyph(*glyph, tft->getCursorX(), tft->getCursorY(), textSize);
         else drawMissingGlyph(codepoint, tft->getCursorX(), tft->getCursorY(), textSize);
     }
-    if (!ascii.isEmpty()) tft->print(ascii);
 }
 #endif
 
