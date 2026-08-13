@@ -34,9 +34,22 @@ build_dir = Path(senv.subst("$BUILD_DIR"))
 proj_dir = Path(senv.subst("$PROJECT_DIR"))
 pioenv = senv.subst("${PIOENV}")
 
-boot_bin = build_dir / "bootloader.bin"
 part_bin = build_dir / "partitions.bin"
 app_bin  = build_dir / "firmware.bin"
+
+
+def _find_bootloader_image():
+    for offset, image in senv.get("FLASH_EXTRA_IMAGES", []):
+        try:
+            image_offset = int(str(offset), 0)
+        except ValueError:
+            continue
+        if image_offset == boot_offset:
+            return Path(senv.subst(str(image)))
+    return build_dir / "bootloader.bin"
+
+
+boot_bin = _find_bootloader_image()
 
 
 out_bin = proj_dir / f"Launcher-{pioenv}.bin"

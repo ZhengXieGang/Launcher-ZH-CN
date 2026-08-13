@@ -1,6 +1,8 @@
 .pio
 .vscode
 *.bin
+!boards/m5stack-cardputer/launcher_bootloader.bin
+tools/launcher_bootloader/sdkconfig.*-bootloader
 include/webFiles.h
 checksum.sha256
 build

@@ -8,6 +8,7 @@
 #include <bootloader_common.h>
 #include <cstring>
 #include <esp_flash.h>
+#include <esp_flash_internal.h>
 #include <esp_flash_partitions.h>
 #include <esp_heap_caps.h>
 #include <esp_ota_ops.h>
@@ -504,7 +505,15 @@ bool launcherPartitionWriteGeneratedTable(const LauncherPartitionTable &table, S
         return false;
     }
 
+    esp_err_t protectionErr =
+        esp_flash_set_dangerous_write_protection(esp_flash_default_chip, false);
+    if (protectionErr != ESP_OK) {
+        setError(error, "Could not unlock partition table sector");
+        return false;
+    }
+
     constexpr size_t kWriteChunk = 256;
+    bool tableWritten = false;
     for (uint8_t attempt = 0; attempt < 3; ++attempt) {
         esp_err_t err =
             esp_flash_erase_region(nullptr, LAUNCHER_PARTITION_TABLE_OFFSET, LAUNCHER_PARTITION_TABLE_SIZE);
@@ -534,12 +543,19 @@ bool launcherPartitionWriteGeneratedTable(const LauncherPartitionTable &table, S
         );
         if (err == ESP_OK &&
             memcmp(partitionTable.get(), verifyTable.get(), LAUNCHER_PARTITION_TABLE_SIZE) == 0) {
-            return true;
+            tableWritten = true;
+            break;
         }
         setError(error, "Partition table verify failed");
     }
 
-    return false;
+    protectionErr = esp_flash_set_dangerous_write_protection(esp_flash_default_chip, true);
+    if (protectionErr != ESP_OK) {
+        setError(error, "Could not restore partition table protection");
+        return false;
+    }
+
+    return tableWritten;
 }
 
 LauncherPartitionEntry *launcherPartitionFindByLabel(LauncherPartitionTable &table, const char *label) {
